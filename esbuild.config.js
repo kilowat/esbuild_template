@@ -12,9 +12,8 @@ console.log(`${productionMode ? 'production' : 'development'} build`);
 let exampleOnLoadPlugin = {
   name: 'example',
   setup(build) {
-    // Load ".txt" files and return an array of words
     build.onLoad({ filter: /\.html$/ }, async (args) => {
-      window.location.reload();
+      build.rebuild();
     })
   },
 }
