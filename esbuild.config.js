@@ -2,6 +2,7 @@ import { argv } from 'node:process';
 import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
+import { sassPlugin } from 'esbuild-sass-plugin'
 
 const buildPath = './dist';
 
@@ -49,7 +50,7 @@ const buildHtml = await esbuild.context({
 
 // bundle CSS
 const buildCSS = await esbuild.context({
-  entryPoints: ['./src/css/main.css'],
+  entryPoints: ['./src/css/styles.scss'],
   bundle: true,
   target,
   external: ['/images/*'],
@@ -68,6 +69,7 @@ const buildCSS = await esbuild.context({
       cleanOnStartPatterns: ['./prepare'],
       cleanOnEndPatterns: ['./post'],
     }),
+    sassPlugin(),
   ]
 });
 
