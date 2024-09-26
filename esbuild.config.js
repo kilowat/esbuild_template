@@ -9,6 +9,19 @@ const
 
 console.log(`${productionMode ? 'production' : 'development'} build`);
 
+const buildLogPlugin = {
+  name: 'rebuild-log',
+  setup({ onStart, onEnd }) {
+    var t
+    onStart(() => {
+      t = Date.now()
+    })
+    onEnd(() => {
+      console.log('build finished in', Date.now() - t, 'ms')
+    })
+  }
+};
+
 const buildMedia = await esbuild.context({
   plugins: [
     copy({
@@ -94,21 +107,21 @@ const buildJS = await esbuild.context({
 
 
 if (productionMode) {
-
   // single production build
+  let t = Date.now()
+  console.log('building...')
   await buildMedia.rebuild();
   buildMedia.dispose();
   // single production build
   await buildHtml.rebuild();
   buildHtml.dispose();
-
   // single production build
   await buildCSS.rebuild();
   buildCSS.dispose();
 
   await buildJS.rebuild();
   buildJS.dispose();
-
+  console.log('finished in', Date.now() - t, 'ms')
 }
 else {
   // watch for file changes
