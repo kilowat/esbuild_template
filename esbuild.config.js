@@ -3,24 +3,13 @@ import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
 
+const buildPath = './dist';
+
 const
   productionMode = ('development' !== (argv[2] || process.env.NODE_ENV)),
   target = 'chrome100,firefox100,safari15'.split(',');
 
 console.log(`${productionMode ? 'production' : 'development'} build`);
-
-const buildLogPlugin = {
-  name: 'rebuild-log',
-  setup({ onStart, onEnd }) {
-    var t
-    onStart(() => {
-      t = Date.now()
-    })
-    onEnd(() => {
-      console.log('build finished in', Date.now() - t, 'ms')
-    })
-  }
-};
 
 const buildMedia = await esbuild.context({
   plugins: [
@@ -28,12 +17,12 @@ const buildMedia = await esbuild.context({
       resolveFrom: 'cwd',
       assets: {
         from: ['./src/images/*'],
-        to: ['./build/images'],
+        to: [`${buildPath}/images`],
       },
       watch: true,
     }),
     clean({
-      patterns: ['./build/images/*',],
+      patterns: [`${buildPath}/images/*`,],
       cleanOnStartPatterns: ['./prepare'],
       cleanOnEndPatterns: ['./post'],
     }),
@@ -45,13 +34,13 @@ const buildHtml = await esbuild.context({
   entryPoints: ['./src/html/*.html'],
   bundle: true,
   logLevel: productionMode ? 'error' : 'info',
-  outdir: './build',
+  outdir: buildPath,
   loader: {
     '.html': 'copy',
   },
   plugins: [
     clean({
-      patterns: ['./build/*.html'],
+      patterns: [`${buildPath}/*.html`],
       cleanOnStartPatterns: ['./prepare'],
       cleanOnEndPatterns: ['./post'],
     }),
@@ -72,10 +61,10 @@ const buildCSS = await esbuild.context({
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
   sourcemap: !productionMode && 'linked',
-  outdir: './build/css',
+  outdir: `${buildPath}/css`,
   plugins: [
     clean({
-      patterns: ['./build/css*'],
+      patterns: [`${buildPath}/css*`],
       cleanOnStartPatterns: ['./prepare'],
       cleanOnEndPatterns: ['./post'],
     }),
@@ -92,13 +81,13 @@ const buildJS = await esbuild.context({
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
   sourcemap: !productionMode && 'linked',
-  outdir: './build/js',
+  outdir: `${buildPath}/js`,
   chunkNames: '[name]-[hash]',
   splitting: true,
   inject: !productionMode ? ['livereload.js'] : [],
   plugins: [
     clean({
-      patterns: ['./build/js*'],
+      patterns: [`${buildPath}/js*`],
       cleanOnStartPatterns: ['./prepare'],
       cleanOnEndPatterns: ['./post'],
     }),
@@ -132,6 +121,6 @@ else {
 
   // development server
   await buildHtml.serve({
-    servedir: './build'
+    servedir: buildPath,
   });
 }
