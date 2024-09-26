@@ -1,0 +1,37 @@
+/* src/css/partials/variables.css */
+:root {
+  --font-body: sans-serif;
+  --color-fore: #fff;
+  --color-back: rgb(168, 119, 119);
+}
+
+/* src/css/partials/elements.css */
+*,
+*::before,
+::after {
+  box-sizing: border-box;
+  font-weight: normal;
+  padding: 0;
+  margin: 0;
+}
+body {
+  font-family: var(--font-body);
+  color: var(--color-fore);
+  background: var(--color-back) url(/images/web.png) repeat;
+  margin: 1em;
+}
+header h1 {
+  font-size: 2em;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><style>*{fill:none;stroke:%23fff;stroke-width:1.5;stroke-miterlimit:10}<\/style></defs><circle cx="12" cy="12" r="10.5"></circle><circle cx="12" cy="12" r="0.95"></circle><polyline points="12 4.36 12 12 16.77 16.77"></polyline></svg>%0A') no-repeat;
+}
+.clock {
+  display: block;
+  font-size: 5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* src/css/main.css */
+/*# sourceMappingURL=main.css.map */

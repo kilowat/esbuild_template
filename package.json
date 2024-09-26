@@ -1,0 +1,17 @@
+{
+  "name": "esbuild",
+  "version": "1.0.0",
+  "description": "CSS and JavaScript build system using esbuild",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "bundle": "node ./esbuild.config.js",
+    "build": "npm run bundle -- production",
+    "start": "npm run bundle -- development"
+  },
+  "author": "Demo",
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "esbuild-plugin-clean": "^1.0.1"
+  }
+}
