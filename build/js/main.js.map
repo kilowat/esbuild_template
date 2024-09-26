@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/js/nochunk.js", "../../src/js/main.js"],
-  "sourcesContent": ["export default function (test) {\r\n    console.log(test);\r\n}", "import nochunk from './nochunk';\n\nnochunk('test_2');\n\nsetTimeout(async () => {\n  const fun = (await import('./chunk')).default;\n  fun();\n}, 1000)"],
-  "mappings": ";;;AAAe,SAAR,gBAAkB,MAAM;AAC3B,UAAQ,IAAI,IAAI;AACpB;;;ACAA,gBAAQ,QAAQ;AAEhB,WAAW,YAAY;AACrB,QAAM,OAAO,MAAM,OAAO,qBAAS,GAAG;AACtC,MAAI;AACN,GAAG,GAAI;",
-  "names": []
-}

@@ -1,7 +1,7 @@
 import { argv } from 'node:process';
 import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
-import fs from 'node:fs'
+import { copy } from 'esbuild-plugin-copy';
 
 const
   productionMode = ('development' !== (argv[2] || process.env.NODE_ENV)),
@@ -9,16 +9,26 @@ const
 
 console.log(`${productionMode ? 'production' : 'development'} build`);
 
-let exampleOnLoadPlugin = {
-  name: 'example',
-  setup(build) {
-    build.onLoad({ filter: /\.html$/ }, async (args) => {
-      build.rebuild();
-    })
-  },
-}
+const buildMedia = await esbuild.context({
+  plugins: [
+    copy({
+      resolveFrom: 'cwd',
+      assets: {
+        from: ['./src/images/*'],
+        to: ['./build/images'],
+      },
+      watch: true,
+    }),
+    clean({
+      patterns: ['./build/images/*',],
+      cleanOnStartPatterns: ['./prepare'],
+      cleanOnEndPatterns: ['./post'],
+    }),
+  ]
+});
 
-const buldHtml = await esbuild.context({
+
+const buildHtml = await esbuild.context({
   entryPoints: ['./src/html/*.html'],
   bundle: true,
   logLevel: productionMode ? 'error' : 'info',
@@ -27,7 +37,11 @@ const buldHtml = await esbuild.context({
     '.html': 'copy',
   },
   plugins: [
-    exampleOnLoadPlugin,
+    clean({
+      patterns: ['./build/*.html'],
+      cleanOnStartPatterns: ['./prepare'],
+      cleanOnEndPatterns: ['./post'],
+    }),
   ]
 });
 
@@ -55,9 +69,7 @@ const buildCSS = await esbuild.context({
   ]
 });
 
-
 // bundle JS
-
 const buildJS = await esbuild.context({
   entryPoints: ['./src/js/main.js'],
   format: 'esm',
@@ -84,8 +96,11 @@ const buildJS = await esbuild.context({
 if (productionMode) {
 
   // single production build
-  await buldHtml.rebuild();
-  buldHtml.dispose();
+  await buildMedia.rebuild();
+  buildMedia.dispose();
+  // single production build
+  await buildHtml.rebuild();
+  buildHtml.dispose();
 
   // single production build
   await buildCSS.rebuild();
@@ -97,12 +112,13 @@ if (productionMode) {
 }
 else {
   // watch for file changes
-  await buldHtml.watch();
+  await buildMedia.watch();
+  await buildHtml.watch();
   await buildCSS.watch();
   await buildJS.watch();
 
   // development server
-  await buildCSS.serve({
+  await buildHtml.serve({
     servedir: './build'
   });
 }

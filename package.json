@@ -12,6 +12,7 @@
   "author": "Demo",
   "devDependencies": {
     "esbuild": "^0.24.0",
-    "esbuild-plugin-clean": "^1.0.1"
+    "esbuild-plugin-clean": "^1.0.1",
+    "esbuild-plugin-copy": "^2.1.1"
   }
 }
