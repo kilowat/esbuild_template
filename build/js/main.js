@@ -1,4 +1,4 @@
-import "./chunk-LY6QAQLN.js";
+import "./chunk-GILGZRVN.js";
 
 // src/js/nochunk.js
 function nochunk_default(test) {
@@ -8,7 +8,7 @@ function nochunk_default(test) {
 // src/js/main.js
 nochunk_default("test_2");
 setTimeout(async () => {
-  const fun = (await import("./chunk-KMJW4KVD.js")).default;
+  const fun = (await import("./chunk-GLQYRD4R.js")).default;
   fun();
 }, 1e3);
 //# sourceMappingURL=main.js.map

@@ -1,12 +1,23 @@
 import { argv } from 'node:process';
 import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
+import fs from 'node:fs'
 
 const
   productionMode = ('development' !== (argv[2] || process.env.NODE_ENV)),
   target = 'chrome100,firefox100,safari15'.split(',');
 
 console.log(`${productionMode ? 'production' : 'development'} build`);
+
+let exampleOnLoadPlugin = {
+  name: 'example',
+  setup(build) {
+    // Load ".txt" files and return an array of words
+    build.onLoad({ filter: /\.html$/ }, async (args) => {
+      window.location.reload();
+    })
+  },
+}
 
 const buldHtml = await esbuild.context({
   entryPoints: ['./src/html/*.html'],
@@ -16,6 +27,9 @@ const buldHtml = await esbuild.context({
   loader: {
     '.html': 'copy',
   },
+  plugins: [
+    exampleOnLoadPlugin,
+  ]
 });
 
 // bundle CSS
@@ -57,7 +71,7 @@ const buildJS = await esbuild.context({
   outdir: './build/js',
   chunkNames: '[name]-[hash]',
   splitting: true,
-  inject: !productionMode ? ['src/js/livereload.js'] : [],
+  inject: !productionMode ? ['livereload.js'] : [],
   plugins: [
     clean({
       patterns: ['./build/js*'],

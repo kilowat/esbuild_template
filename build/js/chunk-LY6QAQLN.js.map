@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/js/livereload.js"],
-  "sourcesContent": ["// esbuild server-sent event - live reload CSS\r\nnew EventSource('/esbuild').addEventListener('change', e => {\r\n\r\n    const { added, removed, updated } = JSON.parse(e.data);\r\n    console.log(added);\r\n    // reload when CSS files are added or removed\r\n    if (added.length || removed.length) {\r\n        location.reload();\r\n        return;\r\n    }\r\n\r\n    // replace updated CSS files\r\n    Array.from(document.getElementsByTagName('link')).forEach(link => {\r\n\r\n        const url = new URL(link.href), path = url.pathname;\r\n\r\n        if (updated.includes(path) && url.host === location.host) {\r\n\r\n            const css = link.cloneNode();\r\n            css.onload = () => link.remove();\r\n            css.href = `${path}?${+new Date()}`;\r\n            link.after(css);\r\n\r\n        }\r\n\r\n    })\r\n\r\n});"],
-  "mappings": ";AACA,IAAI,YAAY,UAAU,EAAE,iBAAiB,UAAU,OAAK;AAExD,QAAM,EAAE,OAAO,SAAS,QAAQ,IAAI,KAAK,MAAM,EAAE,IAAI;AACrD,UAAQ,IAAI,KAAK;AAEjB,MAAI,MAAM,UAAU,QAAQ,QAAQ;AAChC,aAAS,OAAO;AAChB;AAAA,EACJ;AAGA,QAAM,KAAK,SAAS,qBAAqB,MAAM,CAAC,EAAE,QAAQ,UAAQ;AAE9D,UAAM,MAAM,IAAI,IAAI,KAAK,IAAI,GAAG,OAAO,IAAI;AAE3C,QAAI,QAAQ,SAAS,IAAI,KAAK,IAAI,SAAS,SAAS,MAAM;AAEtD,YAAM,MAAM,KAAK,UAAU;AAC3B,UAAI,SAAS,MAAM,KAAK,OAAO;AAC/B,UAAI,OAAO,GAAG,IAAI,IAAI,CAAC,oBAAI,KAAK,CAAC;AACjC,WAAK,MAAM,GAAG;AAAA,IAElB;AAAA,EAEJ,CAAC;AAEL,CAAC;",
-  "names": []
-}

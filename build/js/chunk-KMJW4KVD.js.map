@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/js/chunk.js"],
-  "sourcesContent": ["export default function () {\r\n    console.log('test');\r\n}"],
-  "mappings": ";;;AAAe,SAAR,gBAAoB;AACvB,UAAQ,IAAI,MAAM;AACtB;",
-  "names": []
-}
