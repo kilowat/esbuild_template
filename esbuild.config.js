@@ -15,7 +15,6 @@ const
 
 console.log(`${productionMode ? 'prod' : 'dev'} ${watchMode ? 'watch' : 'build'}`);
 
-
 const buildMedia = await esbuild.context({
   plugins: [
     copy({
@@ -120,7 +119,11 @@ if (!watchMode) {
   console.log('finished in', Date.now() - t, 'ms')
 }
 else {
-
+  console.log('watching...')
+  await buildMedia.watch();
+  await buildHtml.watch();
+  await buildCSS.watch();
+  await buildJS.watch();
 
   if (servMode) {
     await buildHtml.serve({
