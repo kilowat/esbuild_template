@@ -9,7 +9,8 @@
     "watch:prod": "npm run bundle -- prod watch",
     "watch": "npm run bundle -- dev watch",
     "build": "npm run bundle -- prod",
-    "start": "npm run bundle -- dev serv"
+    "start": "npm run bundle -- dev serv watch",
+    "start:prod": "npm run bundle -- prod serv"
   },
   "author": "Demo",
   "devDependencies": {
@@ -19,6 +20,7 @@
     "esbuild-sass-plugin": "^3.3.1"
   },
   "dependencies": {
-    "@symbiotejs/symbiote": "^2.3.2"
+    "@symbiotejs/symbiote": "^2.3.2",
+    "swiper": "^11.1.14"
   }
 }

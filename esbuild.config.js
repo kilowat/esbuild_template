@@ -84,7 +84,6 @@ const buildCSS = await esbuild.context({
 // bundle JS
 const buildJS = await esbuild.context({
   entryPoints: ['./src/js/main.js'],
-  format: 'esm',
   bundle: true,
   target,
   drop: productionMode ? ['debugger', 'console'] : [],
@@ -92,8 +91,6 @@ const buildJS = await esbuild.context({
   minify: productionMode,
   sourcemap: !productionMode && 'linked',
   outdir: `${buildPath}/js`,
-  chunkNames: '[name]-[hash]',
-  splitting: true,
   inject: !productionMode ? ['livereload.js'] : [],
   plugins: [
     clean({
@@ -105,7 +102,7 @@ const buildJS = await esbuild.context({
 });
 
 
-if (productionMode && !watchMode) {
+if (!watchMode) {
   // single production build
   let t = Date.now()
   console.log('building...')
@@ -123,11 +120,7 @@ if (productionMode && !watchMode) {
   console.log('finished in', Date.now() - t, 'ms')
 }
 else {
-  console.log('watching...')
-  await buildMedia.watch();
-  await buildHtml.watch();
-  await buildCSS.watch();
-  await buildJS.watch();
+
 
   if (servMode) {
     await buildHtml.serve({
