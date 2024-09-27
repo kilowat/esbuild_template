@@ -3,16 +3,18 @@ import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
 import { sassPlugin } from 'esbuild-sass-plugin'
-import path from 'path';
-const buildPath = './dist';
+
+const buildPath = 'dist';
+const publicPath = '';
 
 const
-  productionMode = ('development' !== (argv[2] || process.env.NODE_ENV)),
+  productionMode = ('dev' !== (argv[2] || process.env.NODE_ENV)),
+  watchMode = ('watch' !== (argv[3] || process.env.NODE_ENV)),
   target = 'chrome100,firefox100,safari15'.split(',');
 
-console.log(`${productionMode ? 'production' : 'development'} build`);
+console.log(`${productionMode ? 'prod' : 'dev'} ${watchMode ? 'watch' : 'build'}`);
 
-/*
+
 const buildMedia = await esbuild.context({
   plugins: [
     copy({
@@ -30,7 +32,7 @@ const buildMedia = await esbuild.context({
     }),
   ]
 });
-*/
+
 
 const buildHtml = await esbuild.context({
   entryPoints: ['./src/html/*.html'],
@@ -51,11 +53,10 @@ const buildHtml = await esbuild.context({
 
 // bundle CSS
 const buildCSS = await esbuild.context({
-  publicPath: '/test',
   entryPoints: ['./src/css/styles.scss'],
   bundle: true,
   target,
-  external: ['./src/images/*'],
+  external: ['@images/*', `${publicPath}/images/*`],
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
   sourcemap: !productionMode && 'linked',
@@ -65,11 +66,11 @@ const buildCSS = await esbuild.context({
       {
         transform: async (rawSource, resolveDir) => {
           // TODO: Still working here, definitely not finalized
-          const source = rawSource.replace(/@images/, path.resolve(__dirname, 'app/assets/images/'));
-          console.log(resolveDir);
+          const source = rawSource.replace(/@images/, `${publicPath}/images`);
           return source;
         },
       }
+
     ),
     clean({
       patterns: [`${buildPath}/css*`],
@@ -103,12 +104,12 @@ const buildJS = await esbuild.context({
 });
 
 
-if (productionMode) {
+if (productionMode && !watchMode) {
   // single production build
   let t = Date.now()
   console.log('building...')
-  // await buildMedia.rebuild();
-  // buildMedia.dispose();
+  await buildMedia.rebuild();
+  buildMedia.dispose();
   // single production build
   await buildHtml.rebuild();
   buildHtml.dispose();
@@ -121,14 +122,14 @@ if (productionMode) {
   console.log('finished in', Date.now() - t, 'ms')
 }
 else {
-  // watch for file changes
-  // await buildMedia.watch();
+  console.log('watching...')
+  await buildMedia.watch();
   await buildHtml.watch();
   await buildCSS.watch();
   await buildJS.watch();
-
-  // development server
-  await buildHtml.serve({
-    servedir: buildPath,
-  });
+  if (!watchMode) {
+    await buildHtml.serve({
+      servedir: buildPath,
+    });
+  }
 }
