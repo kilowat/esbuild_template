@@ -3,7 +3,7 @@ import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
 import { sassPlugin } from 'esbuild-sass-plugin'
-
+import path from 'path';
 const buildPath = './dist';
 
 const
@@ -12,6 +12,7 @@ const
 
 console.log(`${productionMode ? 'production' : 'development'} build`);
 
+/*
 const buildMedia = await esbuild.context({
   plugins: [
     copy({
@@ -29,7 +30,7 @@ const buildMedia = await esbuild.context({
     }),
   ]
 });
-
+*/
 
 const buildHtml = await esbuild.context({
   entryPoints: ['./src/html/*.html'],
@@ -50,26 +51,31 @@ const buildHtml = await esbuild.context({
 
 // bundle CSS
 const buildCSS = await esbuild.context({
+  publicPath: '/test',
   entryPoints: ['./src/css/styles.scss'],
   bundle: true,
   target,
-  external: ['/images/*'],
-  loader: {
-    '.png': 'file',
-    '.jpg': 'file',
-    '.svg': 'dataurl'
-  },
+  external: ['./src/images/*'],
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
   sourcemap: !productionMode && 'linked',
   outdir: `${buildPath}/css`,
   plugins: [
+    sassPlugin(
+      {
+        transform: async (rawSource, resolveDir) => {
+          // TODO: Still working here, definitely not finalized
+          const source = rawSource.replace(/@images/, path.resolve(__dirname, 'app/assets/images/'));
+          console.log(resolveDir);
+          return source;
+        },
+      }
+    ),
     clean({
       patterns: [`${buildPath}/css*`],
       cleanOnStartPatterns: ['./prepare'],
       cleanOnEndPatterns: ['./post'],
     }),
-    sassPlugin(),
   ]
 });
 
@@ -101,8 +107,8 @@ if (productionMode) {
   // single production build
   let t = Date.now()
   console.log('building...')
-  await buildMedia.rebuild();
-  buildMedia.dispose();
+  // await buildMedia.rebuild();
+  // buildMedia.dispose();
   // single production build
   await buildHtml.rebuild();
   buildHtml.dispose();
@@ -116,7 +122,7 @@ if (productionMode) {
 }
 else {
   // watch for file changes
-  await buildMedia.watch();
+  // await buildMedia.watch();
   await buildHtml.watch();
   await buildCSS.watch();
   await buildJS.watch();
