@@ -8,8 +8,9 @@ const buildPath = 'dist';
 const publicPath = '';
 
 const
-  productionMode = ('dev' !== (argv[2] || process.env.NODE_ENV)),
-  watchMode = ('watch' !== (argv[3] || process.env.NODE_ENV)),
+  productionMode = argv.includes('prod'),
+  watchMode = argv.includes('watch'),
+  servMode = argv.includes('serv'),
   target = 'chrome100,firefox100,safari15'.split(',');
 
 console.log(`${productionMode ? 'prod' : 'dev'} ${watchMode ? 'watch' : 'build'}`);
@@ -127,7 +128,8 @@ else {
   await buildHtml.watch();
   await buildCSS.watch();
   await buildJS.watch();
-  if (!watchMode) {
+
+  if (servMode) {
     await buildHtml.serve({
       servedir: buildPath,
     });

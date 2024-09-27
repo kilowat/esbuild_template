@@ -6,10 +6,10 @@
   "main": "index.js",
   "scripts": {
     "bundle": "node ./esbuild.config.js",
-    "watch:prod": "npm run bundle -- dev -- watch",
-    "watch": "npm run bundle -- dev -- watch",
+    "watch:prod": "npm run bundle -- prod watch",
+    "watch": "npm run bundle -- dev watch",
     "build": "npm run bundle -- prod",
-    "start": "npm run bundle -- dev"
+    "start": "npm run bundle -- dev serv"
   },
   "author": "Demo",
   "devDependencies": {
