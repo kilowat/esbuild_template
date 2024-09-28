@@ -149,6 +149,7 @@ else {
   await buildMedia.watch();
   await buildCSS.watch();
   await buildJS.watch();
+
   if (servMode) {
     const serv = await buildHtml.serve({
       servedir: buildPath,
@@ -158,4 +159,5 @@ else {
       console.log(serv)
     }
   }
+
 }
