@@ -4,6 +4,9 @@ import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
 import { sassPlugin } from 'esbuild-sass-plugin';
 import esbuildPluginTsc from 'esbuild-plugin-tsc';
+import ImportGlobPlugin from "esbuild-plugin-import-glob";
+const ImportGlob = ImportGlobPlugin.default
+
 const buildPath = 'dist';
 //const publicPath = '';
 
@@ -89,7 +92,7 @@ const buildCSS = await esbuild.context({
 
 // bundle JS
 const buildJS = await esbuild.context({
-  entryPoints: ['./src/js/main.js'],
+  entryPoints: ['./src/js/index.ts'],
   bundle: true,
   //format: 'esm',
   //splitting: true,
@@ -98,13 +101,14 @@ const buildJS = await esbuild.context({
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
   sourcemap: !productionMode && 'linked',
-  outdir: `${buildPath}/js/main.bundle.js`,
+  outfile: `${buildPath}/js/main.bundle.js`,
   inject: !productionMode ? ['livereload.js'] : [],
 
   loader: {
-    '.svg': 'dataurl'
+    '.svg': 'text'
   },
   plugins: [
+    ImportGlob(),
     esbuildPluginTsc({
       force: true,
     }),
