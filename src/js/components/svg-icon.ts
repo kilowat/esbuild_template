@@ -23,12 +23,11 @@ export class SvgIcon extends HTMLElement {
 
   render() {
     const fillColor = this.getAttribute('fill') || 'currentColor';
-
     this.shadowRoot!.innerHTML = `
       <style>
-        svg {
-          width: 24px;
-          height: 24px;
+      svg {
+          width: var(--icon-size);
+          height: var(--icon-size);
         }
         path {
           fill: ${fillColor};

@@ -63,7 +63,7 @@ const buildCSS = await esbuild.context({
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
   sourcemap: !productionMode && 'linked',
-  outdir: `${buildPath}/css`,
+  outfile: `${buildPath}/css/styles.bundle.css`,
   loader: {
     '.png': 'file',
     '.jpg': 'file',
@@ -73,6 +73,9 @@ const buildCSS = await esbuild.context({
   },
   plugins: [
     sassPlugin(
+      {
+
+      }
       /*
       {
         transform: async (rawSource) => {
@@ -146,7 +149,6 @@ else {
   await buildMedia.watch();
   await buildCSS.watch();
   await buildJS.watch();
-
   if (servMode) {
     const serv = await buildHtml.serve({
       servedir: buildPath,
