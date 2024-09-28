@@ -10,17 +10,23 @@
     "watch": "npm run bundle -- dev watch",
     "build": "npm run bundle -- prod",
     "start": "npm run bundle -- dev serv watch",
-    "start:prod": "npm run bundle -- prod serv"
+    "start:prod": "npm run bundle -- prod serv watch"
   },
   "author": "Demo",
   "devDependencies": {
     "esbuild": "^0.24.0",
     "esbuild-plugin-clean": "^1.0.1",
     "esbuild-plugin-copy": "^2.1.1",
-    "esbuild-sass-plugin": "^3.3.1"
+    "esbuild-sass-plugin": "^3.3.1",
+    "postcss": "^8.4.47",
+    "postcss-modules": "^6.0.0",
+    "postcss-preset-env": "^10.0.5"
   },
   "dependencies": {
     "@symbiotejs/symbiote": "^2.3.2",
+    "hash-file": "^3.0.0",
+    "remove": "^0.1.5",
+    "save-dev": "^0.0.1-security",
     "swiper": "^11.1.14"
   }
 }

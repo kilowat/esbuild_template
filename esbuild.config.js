@@ -1,9 +1,11 @@
 import { argv } from 'node:process';
+import fs from 'fs';
 import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
-import { sassPlugin } from 'esbuild-sass-plugin'
-
+import { sassPlugin } from 'esbuild-sass-plugin';
+import postcss from 'postcss';
+import postcssPresetEnv from 'postcss-preset-env';
 const buildPath = 'dist';
 const publicPath = '';
 
@@ -14,6 +16,23 @@ const
   target = 'chrome100,firefox100,safari15'.split(',');
 
 console.log(`${productionMode ? 'prod' : 'dev'} ${watchMode ? 'watch' : 'build'}`);
+
+const buildHtml = await esbuild.context({
+  entryPoints: ['./src/html/*.html'],
+  bundle: true,
+  logLevel: productionMode ? 'error' : 'info',
+  outdir: buildPath,
+  loader: {
+    '.html': 'copy',
+  },
+  plugins: [
+    clean({
+      patterns: [`${buildPath}/*.html`],
+      cleanOnStartPatterns: ['./prepare'],
+      cleanOnEndPatterns: ['./post'],
+    }),
+  ]
+});
 
 const buildMedia = await esbuild.context({
   plugins: [
@@ -33,29 +52,10 @@ const buildMedia = await esbuild.context({
   ]
 });
 
-
-const buildHtml = await esbuild.context({
-  entryPoints: ['./src/html/*.html'],
-  bundle: true,
-  logLevel: productionMode ? 'error' : 'info',
-  outdir: buildPath,
-  loader: {
-    '.html': 'copy',
-  },
-  plugins: [
-    clean({
-      patterns: [`${buildPath}/*.html`],
-      cleanOnStartPatterns: ['./prepare'],
-      cleanOnEndPatterns: ['./post'],
-    }),
-  ]
-});
-
 // bundle CSS
 const buildCSS = await esbuild.context({
   entryPoints: ['./src/css/styles.scss'],
   bundle: true,
-  target,
   external: ['@images/*', `${publicPath}/images/*`],
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
@@ -64,13 +64,14 @@ const buildCSS = await esbuild.context({
   plugins: [
     sassPlugin(
       {
-        transform: async (rawSource, resolveDir) => {
-          // TODO: Still working here, definitely not finalized
+        transform: async (rawSource) => {
           const source = rawSource.replace(/@images/, `${publicPath}/images`);
-          return source;
+          const { css } = await postcss([
+            postcssPresetEnv({ stage: 0 })
+          ]).process(source, { from: undefined });
+          return css;
         },
       }
-
     ),
     clean({
       patterns: [`${buildPath}/css*`],
@@ -84,6 +85,8 @@ const buildCSS = await esbuild.context({
 const buildJS = await esbuild.context({
   entryPoints: ['./src/js/main.js'],
   bundle: true,
+  //format: 'esm',
+  //splitting: true,
   target,
   drop: productionMode ? ['debugger', 'console'] : [],
   logLevel: productionMode ? 'error' : 'info',
@@ -105,11 +108,13 @@ if (!watchMode) {
   // single production build
   let t = Date.now()
   console.log('building...')
-  await buildMedia.rebuild();
-  buildMedia.dispose();
   // single production build
   await buildHtml.rebuild();
   buildHtml.dispose();
+
+  await buildMedia.rebuild();
+  buildMedia.dispose();
+
   // single production build
   await buildCSS.rebuild();
   buildCSS.dispose();
@@ -120,14 +125,18 @@ if (!watchMode) {
 }
 else {
   console.log('watching...')
-  await buildMedia.watch();
   await buildHtml.watch();
+  await buildMedia.watch();
   await buildCSS.watch();
   await buildJS.watch();
 
   if (servMode) {
-    await buildHtml.serve({
+    const serv = await buildHtml.serve({
       servedir: buildPath,
     });
+    if (productionMode) {
+      console.log('server in prod mode');
+      console.log(serv)
+    }
   }
 }
