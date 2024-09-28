@@ -3,7 +3,7 @@ import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
 import { sassPlugin } from 'esbuild-sass-plugin';
-import svgSprite from 'unplugin-svg-sprite/esbuild'
+
 const buildPath = 'dist';
 //const publicPath = '';
 
@@ -16,13 +16,7 @@ const
 console.log(`${productionMode ? 'prod' : 'dev'} ${watchMode ? 'watch' : 'build'}`);
 
 
-/*
-const buildIcons = esbuild.context({
-  plugins: [svgSprite({
 
-  })],
-})
-*/
 const buildHtml = await esbuild.context({
   entryPoints: ['./src/html/*.html'],
   bundle: true,
@@ -106,6 +100,10 @@ const buildJS = await esbuild.context({
   sourcemap: !productionMode && 'linked',
   outdir: `${buildPath}/js`,
   inject: !productionMode ? ['livereload.js'] : [],
+
+  loader: {
+    '.svg': 'dataurl'
+  },
   plugins: [
     clean({
       patterns: [`${buildPath}/js*`],
