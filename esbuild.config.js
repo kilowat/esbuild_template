@@ -3,7 +3,7 @@ import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
 import { sassPlugin } from 'esbuild-sass-plugin';
-
+import esbuildPluginTsc from 'esbuild-plugin-tsc';
 const buildPath = 'dist';
 //const publicPath = '';
 
@@ -98,13 +98,16 @@ const buildJS = await esbuild.context({
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
   sourcemap: !productionMode && 'linked',
-  outdir: `${buildPath}/js`,
+  outdir: `${buildPath}/js/main.bundle.js`,
   inject: !productionMode ? ['livereload.js'] : [],
 
   loader: {
     '.svg': 'dataurl'
   },
   plugins: [
+    esbuildPluginTsc({
+      force: true,
+    }),
     clean({
       patterns: [`${buildPath}/js*`],
       cleanOnStartPatterns: ['./prepare'],

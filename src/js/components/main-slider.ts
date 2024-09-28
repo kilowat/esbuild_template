@@ -3,17 +3,21 @@ import Swiper from 'swiper';
 import { Navigation, Pagination } from 'swiper/modules';
 // init Swiper:
 const swiper = new Swiper('.swiper', {
-    modules: [Navigation, Pagination],
+  modules: [Navigation, Pagination],
 });
 
-export class MainSlider extends Symbiote {
-    // Initiate state:
-    init$ = {
-        count: 0,
-        increment: () => {
-            this.$.count++;
-        },
-    }
+interface SliderState {
+
+}
+
+export class MainSlider extends Symbiote<SliderState> {
+  // Initiate state:
+  init$ = {
+    count: 0,
+    increment: () => {
+
+    },
+  }
 }
 
 // Define template:
