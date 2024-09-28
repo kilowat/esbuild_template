@@ -1,13 +1,11 @@
 import { argv } from 'node:process';
-import fs from 'fs';
 import * as esbuild from 'esbuild';
 import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
 import { sassPlugin } from 'esbuild-sass-plugin';
-import postcss from 'postcss';
-import postcssPresetEnv from 'postcss-preset-env';
+import svgSprite from 'unplugin-svg-sprite/esbuild'
 const buildPath = 'dist';
-const publicPath = '';
+//const publicPath = '';
 
 const
   productionMode = argv.includes('prod'),
@@ -17,6 +15,14 @@ const
 
 console.log(`${productionMode ? 'prod' : 'dev'} ${watchMode ? 'watch' : 'build'}`);
 
+
+/*
+const buildIcons = esbuild.context({
+  plugins: [svgSprite({
+
+  })],
+})
+*/
 const buildHtml = await esbuild.context({
   entryPoints: ['./src/html/*.html'],
   bundle: true,
@@ -56,22 +62,28 @@ const buildMedia = await esbuild.context({
 const buildCSS = await esbuild.context({
   entryPoints: ['./src/css/styles.scss'],
   bundle: true,
-  external: ['@images/*', `${publicPath}/images/*`],
+  //external: ['@images/*', `${publicPath}/images/*`],
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
   sourcemap: !productionMode && 'linked',
   outdir: `${buildPath}/css`,
+  loader: {
+    '.png': 'file',
+    '.jpg': 'file',
+    '.jpeg': 'file',
+    '.gif': 'file',
+    '.svg': 'dataurl',
+  },
   plugins: [
     sassPlugin(
+      /*
       {
         transform: async (rawSource) => {
           const source = rawSource.replace(/@images/, `${publicPath}/images`);
-          const { css } = await postcss([
-            postcssPresetEnv({ stage: 0 })
-          ]).process(source, { from: undefined });
-          return css;
+          return source;
         },
       }
+      */
     ),
     clean({
       patterns: [`${buildPath}/css*`],

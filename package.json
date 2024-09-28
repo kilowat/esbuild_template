@@ -18,15 +18,10 @@
     "esbuild-plugin-clean": "^1.0.1",
     "esbuild-plugin-copy": "^2.1.1",
     "esbuild-sass-plugin": "^3.3.1",
-    "postcss": "^8.4.47",
-    "postcss-modules": "^6.0.0",
-    "postcss-preset-env": "^10.0.5"
+    "unplugin-svg-sprite": "^1.2.8"
   },
   "dependencies": {
     "@symbiotejs/symbiote": "^2.3.2",
-    "hash-file": "^3.0.0",
-    "remove": "^0.1.5",
-    "save-dev": "^0.0.1-security",
     "swiper": "^11.1.14"
   }
 }
