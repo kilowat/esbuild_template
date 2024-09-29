@@ -46,6 +46,7 @@ const build = await esbuild.context({
     '.gif': 'file',
     '.jpeg': 'file',
     '.woff': 'file',
+    '.woff2': 'file',
     '.ttf': 'file',
     '.html': 'copy',
   },
