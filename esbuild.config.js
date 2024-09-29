@@ -36,6 +36,7 @@ const build = await esbuild.context({
   outdir: buildPath,
   inject: !productionMode ? ['livereload.js'] : [],
   platform: 'browser',
+  assetNames: 'assets/[name]-[hash]',
   write: true,
   // external: ['./src/images/'],
   loader: {
