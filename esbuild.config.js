@@ -37,6 +37,7 @@ const build = await esbuild.context({
   inject: !productionMode ? ['livereload.js'] : [],
   platform: 'browser',
   write: true,
+  external: ['./src/images/'],
   loader: {
     '.svg': 'text',
     '.png': 'file',
@@ -48,12 +49,18 @@ const build = await esbuild.context({
     '.html': 'copy',
   },
   plugins: [
-    sassPlugin({ watch: true, filter: /(global)\.scss$/, type: 'css', loadPaths: ['./src/styles'] }),
     sassPlugin({
       watch: true,
       filter: /\.scss$/i,
       type: 'css',
       loadPaths: ['./src/styles'],
+      /*
+      transform: async (rawSource) => {
+        //const source = rawSource.replace(/@images/, `${publicPath}/images`);
+        return rawSource.replace(/(url\(['"]?)(\.\.?\/)([^'")]+['"]?\))/g, `$1${publicPath}/$2$3`)
+        //return source;
+      }
+        */
     }),
     ImportGlob(),
     esbuildPluginTsc({
