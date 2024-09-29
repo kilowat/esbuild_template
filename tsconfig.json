@@ -6,7 +6,12 @@
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
     "maxNodeModuleJsDepth": 2,
-    "target": "es5",
+    "target": "ES5",
+    "paths": {
+      "*": [
+        "./node_modules/*"
+      ]
+    },
     "lib": [
       "ES2015",
       "DOM"
@@ -15,5 +20,9 @@
   "include": [
     "src/js/**/*",
     "src/icons/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "esbuild.config.js"
   ]
 }

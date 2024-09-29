@@ -7,17 +7,11 @@ const swiper = new Swiper('.swiper', {
 });
 
 interface SliderState {
-
+  count: number
 }
 
 export class MainSlider extends Symbiote<SliderState> {
-  // Initiate state:
-  init$ = {
-    count: 0,
-    increment: () => {
 
-    },
-  }
 }
 
 // Define template:

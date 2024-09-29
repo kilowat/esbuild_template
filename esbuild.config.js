@@ -4,9 +4,7 @@ import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
 import { sassPlugin } from 'esbuild-sass-plugin';
 import esbuildPluginTsc from 'esbuild-plugin-tsc';
-import ImportGlobPlugin from 'esbuild-plugin-import-glob';
 import SvgPlugin from 'esbuild-plugin-svg';
-const ImportGlob = ImportGlobPlugin.default
 
 const buildPath = 'dist';
 const publicPath = '/';
@@ -66,7 +64,6 @@ const build = await esbuild.context({
       }
         */
     }),
-    ImportGlob(),
     esbuildPluginTsc({
       force: true,
     }),
