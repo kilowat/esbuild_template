@@ -1,48 +1,45 @@
-export class SvgIcon extends HTMLElement {
-  svgContent: string;
 
-  constructor(svgContent: string) {
+
+export default class IconComponent extends HTMLElement {
+  private shadow: ShadowRoot;
+
+  constructor() {
     super();
-    this.svgContent = svgContent;
-    this.attachShadow({ mode: 'open' });
-  }
-
-  static get observedAttributes() {
-    return ['fill']; // Наблюдаем за изменением атрибута fill
+    this.shadow = this.attachShadow({ mode: 'open' });
   }
 
   connectedCallback() {
-    this.render();
-  }
-
-  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
-    if (oldValue !== newValue) {
-      this.render();
+    const iconName = this.getAttribute('name');
+    if (iconName) {
+      this.loadIcon(iconName);
+    } else {
+      console.error('Icon name not provided.');
+      this.shadow.innerHTML = '<span>Icon not provided</span>';
     }
   }
 
-  render() {
-    const fillColor = this.getAttribute('fill') || 'currentColor';
-    this.shadowRoot!.innerHTML = `
+  private async loadIcon(iconName: string) {
+    try {
+      const svgContent = await import(`../../icons/${iconName}.svg`);
+      this.render(svgContent.default);
+    } catch (err) {
+      console.error(`Icon "${iconName}" not found.`, err);
+      this.shadow.innerHTML = '<span>Icon not found</span>';
+    }
+  }
+
+  private render(svg: string) {
+    this.shadow.innerHTML = `
       <style>
-      svg {
-          width: var(--icon-size);
-          height: var(--icon-size);
-        }
-        path {
-          fill: ${fillColor};
+        svg {
+          width: var(--icon-size, 24px);
+          height: var(--icon-size, 24px);
+          fill: var(--icon-fill, currentColor);
         }
       </style>
-      ${this.svgContent}
+      ${svg}
     `;
   }
 }
 
-// Функция для регистрации веб-компонента с определенным именем и SVG
-export function defineSvgIcon(tagName: string, svgContent: string) {
-  customElements.define(tagName, class extends SvgIcon {
-    constructor() {
-      super(svgContent);
-    }
-  });
-}
+customElements.define('svg-icon', IconComponent);

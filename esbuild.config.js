@@ -4,7 +4,8 @@ import { clean } from 'esbuild-plugin-clean';
 import { copy } from 'esbuild-plugin-copy';
 import { sassPlugin } from 'esbuild-sass-plugin';
 import esbuildPluginTsc from 'esbuild-plugin-tsc';
-import ImportGlobPlugin from "esbuild-plugin-import-glob";
+import ImportGlobPlugin from 'esbuild-plugin-import-glob';
+import SvgPlugin from 'esbuild-plugin-svg';
 const ImportGlob = ImportGlobPlugin.default
 
 const buildPath = 'dist';
@@ -38,6 +39,7 @@ const build = await esbuild.context({
   platform: 'browser',
   assetNames: 'assets/[name]-[hash]',
   write: true,
+  tsconfig: 'tsconfig.json',
   // external: ['./src/images/'],
   loader: {
     '.svg': 'text',
@@ -78,6 +80,7 @@ const build = await esbuild.context({
       watch: true,
     }),
     */
+    SvgPlugin(),
     copy({
       resolveFrom: 'cwd',
       assets: {
