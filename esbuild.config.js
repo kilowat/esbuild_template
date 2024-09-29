@@ -8,7 +8,7 @@ import ImportGlobPlugin from "esbuild-plugin-import-glob";
 const ImportGlob = ImportGlobPlugin.default
 
 const buildPath = 'dist';
-//const publicPath = '';
+const publicPath = '/';
 
 const
   productionMode = argv.includes('prod'),
@@ -18,27 +18,57 @@ const
 
 console.log(`${productionMode ? 'prod' : 'dev'} ${watchMode ? 'watch' : 'build'}`);
 
+const build = await esbuild.context({
+  entryPoints: [
+    { out: 'bundle', in: './src/js/index.ts' },
+    './src/html/**/*',
+  ],
 
-
-const buildHtml = await esbuild.context({
-  entryPoints: ['./src/html/*.html'],
   bundle: true,
+  //format: 'esm',
+  //splitting: true,
+  publicPath: publicPath,
+  target,
+  drop: productionMode ? ['debugger', 'console'] : [],
   logLevel: productionMode ? 'error' : 'info',
+  minify: productionMode,
+  sourcemap: !productionMode && 'linked',
   outdir: buildPath,
+  inject: !productionMode ? ['livereload.js'] : [],
+  platform: 'browser',
+  write: true,
   loader: {
+    '.svg': 'text',
+    '.png': 'file',
+    '.jpg': 'file',
+    '.gif': 'file',
+    '.jpeg': 'file',
+    '.woff': 'file',
+    '.ttf': 'file',
     '.html': 'copy',
   },
   plugins: [
-    clean({
-      patterns: [`${buildPath}/*.html`],
-      cleanOnStartPatterns: ['./prepare'],
-      cleanOnEndPatterns: ['./post'],
+    sassPlugin({ watch: true, filter: /(global)\.scss$/, type: 'css', loadPaths: ['./src/styles'] }),
+    sassPlugin({
+      watch: true,
+      filter: /\.scss$/i,
+      type: 'css',
+      loadPaths: ['./src/styles'],
     }),
-  ]
-});
-
-const buildMedia = await esbuild.context({
-  plugins: [
+    ImportGlob(),
+    esbuildPluginTsc({
+      force: true,
+    }),
+    /*
+    copy({
+      resolveFrom: 'cwd',
+      assets: {
+        from: ['./src/html/*'],
+        to: [`${buildPath}`],
+      },
+      watch: true,
+    }),
+    */
     copy({
       resolveFrom: 'cwd',
       assets: {
@@ -48,75 +78,7 @@ const buildMedia = await esbuild.context({
       watch: true,
     }),
     clean({
-      patterns: [`${buildPath}/images/*`,],
-      cleanOnStartPatterns: ['./prepare'],
-      cleanOnEndPatterns: ['./post'],
-    }),
-  ]
-});
-
-// bundle CSS
-const buildCSS = await esbuild.context({
-  entryPoints: ['./src/css/styles.scss'],
-  bundle: true,
-  //external: ['@images/*', `${publicPath}/images/*`],
-  logLevel: productionMode ? 'error' : 'info',
-  minify: productionMode,
-  sourcemap: !productionMode && 'linked',
-  outfile: `${buildPath}/css/styles.bundle.css`,
-  loader: {
-    '.png': 'file',
-    '.jpg': 'file',
-    '.jpeg': 'file',
-    '.gif': 'file',
-    '.svg': 'dataurl',
-  },
-  plugins: [
-    sassPlugin(
-      {
-
-      }
-      /*
-      {
-        transform: async (rawSource) => {
-          const source = rawSource.replace(/@images/, `${publicPath}/images`);
-          return source;
-        },
-      }
-      */
-    ),
-    clean({
-      patterns: [`${buildPath}/css*`],
-      cleanOnStartPatterns: ['./prepare'],
-      cleanOnEndPatterns: ['./post'],
-    }),
-  ]
-});
-
-// bundle JS
-const buildJS = await esbuild.context({
-  entryPoints: ['./src/js/index.ts'],
-  bundle: true,
-  //format: 'esm',
-  //splitting: true,
-  target,
-  drop: productionMode ? ['debugger', 'console'] : [],
-  logLevel: productionMode ? 'error' : 'info',
-  minify: productionMode,
-  sourcemap: !productionMode && 'linked',
-  outfile: `${buildPath}/js/main.bundle.js`,
-  inject: !productionMode ? ['livereload.js'] : [],
-
-  loader: {
-    '.svg': 'text'
-  },
-  plugins: [
-    ImportGlob(),
-    esbuildPluginTsc({
-      force: true,
-    }),
-    clean({
-      patterns: [`${buildPath}/js*`],
+      patterns: [`${buildPath}/**/*`],
       cleanOnStartPatterns: ['./prepare'],
       cleanOnEndPatterns: ['./post'],
     }),
@@ -124,40 +86,23 @@ const buildJS = await esbuild.context({
 });
 
 
-if (!watchMode) {
-  // single production build
+if (watchMode) {
+  console.log('watching...')
+  await build.watch();
+} else {
   let t = Date.now()
   console.log('building...')
-  // single production build
-  await buildHtml.rebuild();
-  buildHtml.dispose();
-
-  await buildMedia.rebuild();
-  buildMedia.dispose();
-
-  // single production build
-  await buildCSS.rebuild();
-  buildCSS.dispose();
-
-  await buildJS.rebuild();
-  buildJS.dispose();
+  await build.rebuild();
+  build.dispose();
   console.log('finished in', Date.now() - t, 'ms')
 }
-else {
-  console.log('watching...')
-  await buildHtml.watch();
-  await buildMedia.watch();
-  await buildCSS.watch();
-  await buildJS.watch();
 
-  if (servMode) {
-    const serv = await buildHtml.serve({
-      servedir: buildPath,
-    });
-    if (productionMode) {
-      console.log('server in prod mode');
-      console.log(serv)
-    }
+if (servMode) {
+  const serv = await build.serve({
+    servedir: buildPath,
+    host: 'localhost',
+  });
+  if (productionMode) {
+    console.log(`http://${serv.host}:${serv.port}`);
   }
-
 }

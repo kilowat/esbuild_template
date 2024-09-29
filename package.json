@@ -9,8 +9,8 @@
     "watch:prod": "npm run bundle -- prod watch",
     "watch": "npm run bundle -- dev watch",
     "build": "npm run bundle -- prod",
-    "start": "npm run bundle -- dev serv watch",
-    "start:prod": "npm run bundle -- prod serv watch"
+    "dev": "npm run bundle -- dev serv watch",
+    "start": "npm run bundle -- prod serv watch"
   },
   "author": "Demo",
   "devDependencies": {
