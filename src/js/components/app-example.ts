@@ -19,12 +19,21 @@ class CounterCubit extends Cubit<CounterState> {
     }
 }
 
+type CounterProps = {
+    increment: () => void,
+    decrement: () => void,
+} & CounterState
 
-export class CounterComponent extends Symbiote<any> {
+export class CounterComponent extends Symbiote<CounterProps> {
     private cubit: CounterCubit;
 
+    constructor() {
+        super();
+        this.cubit = new CounterCubit();
+    }
+
     init$ = {
-        state: 0,
+        count: 0,
         increment: () => {
             this.cubit.increment();
         },
@@ -32,18 +41,14 @@ export class CounterComponent extends Symbiote<any> {
             this.cubit.decrement();
         },
     };
-    renderCallback(): void {
-        console.log(this.$['LN/users'])
-    }
-    constructor() {
-        super();
-        this.cubit = new CounterCubit();
 
+    renderCallback(): void {
         // Подписываемся на изменения состояния в Cubit
         this.cubit.subscribe((state) => {
-            this.$.state = state;
+            this.set$(state);
         });
     }
+
     // Очистка подписок при удалении компонента
     disconnectedCallback() {
         super.disconnectedCallback();
@@ -52,7 +57,7 @@ export class CounterComponent extends Symbiote<any> {
     // Определяем шаблон компонента
     static template = html`
     <div>
-      <h1>Counter: {{counter}}</h1>
+      <h1>Counter: {{count}}</h1>
       <button ${{ onclick: 'decrement' }}>Decrement</button>
       <button ${{ onclick: 'increment' }}>Increment</button>
     </div>
