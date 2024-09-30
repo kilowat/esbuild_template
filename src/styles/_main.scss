@@ -2,6 +2,12 @@ body {
     background-color: #ffffff;
 }
 
+svg {
+    width: var(--icon-size, 24px);
+    height: var(--icon-size, 24px);
+    fill: var(--icon-fill, currentColor);
+}
+
 .test-img {
     background-image: url('../images/web.png');
 }

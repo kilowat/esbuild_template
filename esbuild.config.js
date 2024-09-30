@@ -77,7 +77,9 @@ const build = await esbuild.context({
       watch: true,
     }),
     */
-    SvgPlugin(),
+    SvgPlugin({
+      minify: true,
+    }),
     copy({
       resolveFrom: 'cwd',
       assets: {
