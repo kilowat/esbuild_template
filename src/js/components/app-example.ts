@@ -19,11 +19,12 @@ class CounterCubit extends Cubit<CounterState> {
     }
 }
 
+
 export class CounterComponent extends Symbiote<any> {
     private cubit: CounterCubit;
 
     init$ = {
-        state: '0',
+        state: 0,
         increment: () => {
             this.cubit.increment();
         },
@@ -31,7 +32,9 @@ export class CounterComponent extends Symbiote<any> {
             this.cubit.decrement();
         },
     };
-
+    renderCallback(): void {
+        console.log(this.$['LN/users'])
+    }
     constructor() {
         super();
         this.cubit = new CounterCubit();
