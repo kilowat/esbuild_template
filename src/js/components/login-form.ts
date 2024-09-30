@@ -1,5 +1,5 @@
 import Symbiote, { html, css } from '@symbiotejs/symbiote';
-/*
+
 interface FormField {
     name: string;
     label: string;
@@ -37,9 +37,9 @@ interface DynamicFormState {
 
 class DynamicForm extends Symbiote<DynamicFormState> {
     init$ = {
-        formFields: [] as FormField[],
-        formData: {} as FormData,
-        errors: {} as FormErrors,
+        formFields: [],
+        formData: {},
+        errors: {},
         formMessage: '',
 
         // Обработчик изменения полей
@@ -89,7 +89,7 @@ class DynamicForm extends Symbiote<DynamicFormState> {
             this.dispatchEvent(formSubmitEvent);
             this.$.formMessage = 'Form data submitted!';
         },
-    }
+    } as DynamicFormState
 
     // Метод для установки значения поля извне
     setFieldValue(name: string, value: string) {
@@ -124,7 +124,7 @@ class DynamicForm extends Symbiote<DynamicFormState> {
     }
 
     // Функция для рендеринга select
-    static renderSelect(field: FormField) {
+    private static renderSelect(field: FormField) {
         return html`
       <select name="${field.name}" ${{ onchange: 'onInputChange' }}>
         ${field.options?.map(option => html`
@@ -134,7 +134,13 @@ class DynamicForm extends Symbiote<DynamicFormState> {
     `;
     }
 
-    // Определение шаблона
+    //static private renderText
+
+    static get template() {
+        return html``
+    }
+
+    /*
     static get template() {
         return html`
       <form class="form-grid" @submit="submitForm">
@@ -159,7 +165,7 @@ class DynamicForm extends Symbiote<DynamicFormState> {
       </form>
     `;
     }
-
+    */
     // Определение стилей
     static get rootStyles() {
         return css`
