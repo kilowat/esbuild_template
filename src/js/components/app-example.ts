@@ -1,68 +1,49 @@
-import Symbiote, { html } from '@symbiotejs/symbiote';
-import { Cubit } from '../utils';
 
-type CounterState = {
-    count: number,
-}
-// Пример использования
-class CounterCubit extends Cubit<CounterState> {
-    constructor() {
-        super({ count: 0 }); // Начальное состояние
-    }
+import { useCubit } from "../utils/useCubit";
 
-    increment(): void {
-        this.emit({ count: this.state.count + 1 });
-    }
 
-    decrement(): void {
-        this.emit({ count: this.state.count - 1 });
+export const useCounterCubit = (count: number) => {
+    const { emit, state, subscribe, } = useCubit(count);
+
+    return {
+        subscribe,
+        inc: () => emit(state + 1),
+        deinc: () => emit(state - 1),
     }
 }
 
-type CounterProps = {
-    increment: () => void,
-    decrement: () => void,
-} & CounterState
+const counterCubit = useCounterCubit(0);
 
-export class CounterComponent extends Symbiote<CounterProps> {
-    private cubit: CounterCubit;
-
+export class MyCounterControlComponent extends HTMLElement {
     constructor() {
         super();
-        this.cubit = new CounterCubit();
     }
 
-    init$ = {
-        count: 0,
-        increment: () => {
-            this.cubit.increment();
-        },
-        decrement: () => {
-            this.cubit.decrement();
-        },
-    };
+    connectedCallback() {
+        // Рендер-функция для кнопки
+        const render = (state: number) => {
+            this.innerHTML = `
+                <div>
+                    <button id="increment">Increment ${state}</button>
+                </div>
+            `;
 
-    renderCallback(): void {
-        // Подписываемся на изменения состояния в Cubit
-        this.cubit.subscribe((state) => {
-            this.set$(state);
+            // Добавляем обработчик на кнопку
+            this.querySelector('#increment')?.addEventListener('click', () => {
+
+                counterCubit.inc()
+            });
+        };
+        counterCubit.subscribe((state) => {
+            render(state);
+            console.log(state);
         });
     }
 
-    // Очистка подписок при удалении компонента
+    // Отписываемся при удалении компонента
     disconnectedCallback() {
-        super.disconnectedCallback();
-        this.cubit.dispose(); // Освобождаем ресурсы
+
     }
-    // Определяем шаблон компонента
-    static template = html`
-    <div>
-      <h1>Counter: {{count}}</h1>
-      <button ${{ onclick: 'decrement' }}>Decrement</button>
-      <button ${{ onclick: 'increment' }}>Increment</button>
-    </div>
-  `;
 }
 
-// Регистрируем компонент
-CounterComponent.reg('counter-component');
+customElements.define('counter-control', MyCounterControlComponent);
