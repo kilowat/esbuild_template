@@ -1,19 +1,17 @@
-
 import { useCubit } from "../utils/useCubit";
 
-
-export const useCounterCubit = (count: number) => {
-    const { emit, state, subscribe, } = useCubit(count);
+// Функция для работы с счетчиком
+export const useCounterCubit = (initialCount: number) => {
+    const cubit = useCubit(initialCount);
 
     return {
-        subscribe,
-        inc: () => emit(state + 1),
-        deinc: () => emit(state - 1),
-    }
-}
+        subscribe: cubit.subscribe,
+        inc: () => cubit.emit(cubit.state + 1),
+        dec: () => cubit.emit(cubit.state - 1),
+    };
+};
 
 const counterCubit = useCounterCubit(0);
-
 export class MyCounterControlComponent extends HTMLElement {
     constructor() {
         super();
@@ -25,15 +23,21 @@ export class MyCounterControlComponent extends HTMLElement {
             this.innerHTML = `
                 <div>
                     <button id="increment">Increment ${state}</button>
+                    <button id="decrement">Decrement ${state}</button>
                 </div>
             `;
 
-            // Добавляем обработчик на кнопку
+            // Добавляем обработчики на кнопки
             this.querySelector('#increment')?.addEventListener('click', () => {
+                counterCubit.inc();
+            });
 
-                counterCubit.inc()
+            this.querySelector('#decrement')?.addEventListener('click', () => {
+                counterCubit.dec();
             });
         };
+
+        // Подписка на изменения состояния
         counterCubit.subscribe((state) => {
             render(state);
             console.log(state);
@@ -42,8 +46,9 @@ export class MyCounterControlComponent extends HTMLElement {
 
     // Отписываемся при удалении компонента
     disconnectedCallback() {
-
+        // Можно добавить логику отписки, если нужно
     }
 }
 
+// Регистрация веб-компонента
 customElements.define('counter-control', MyCounterControlComponent);
