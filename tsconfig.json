@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
     "maxNodeModuleJsDepth": 2,
-    "target": "ES5",
+    "module": "ESNext", // или "module": "ES6"
+    "target": "ESNext", // для использования последних возможностей JS
+    "moduleResolution": "node", // для правильного разрешения модулей
+    "esModuleInterop": true, // для совместимости с CommonJS
+    "skipLibCheck": true, // для ускорения компиляции
     "paths": {
       "*": [
         "./node_modules/*"
