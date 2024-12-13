@@ -1,31 +1,40 @@
-type StateListener<T> = (state: T) => void;
+export type StateListener<T> = (state: T) => void;
 
 // Определяем тип для cubit
 export type Cubit<T> = {
     state: T;
     emit: (newState: T) => void;
-    subscribe: (listener: (state: T) => void) => () => void;
+    subscribe: (listener: StateListener<T>, buildWhen?: (prevState: T, nextState: T) => boolean) => () => void;
 };
 
 // Функция для создания Cubit
 export function useCubit<T>(initialState: T) {
     let _state = initialState;
-    const listeners = new Set<StateListener<T>>();
+    const listeners = new Set<{ listener: StateListener<T>; buildWhen?: (prevState: T, nextState: T) => boolean }>();
 
     // Изменение состояния и оповещение подписчиков
     function emit(newState: T): void {
+        const prevState = _state;
         _state = newState;
-        listeners.forEach((listener) => listener(_state));
+        listeners.forEach(({ listener, buildWhen }) => {
+            if (!buildWhen || buildWhen(prevState, _state)) {
+                listener(_state);
+            }
+        });
     }
 
-    // Подписка на изменения состояния
-    function subscribe(listener: StateListener<T>): () => void {
-        listeners.add(listener);
+    // Подписка на изменения состояния с опциональной функцией buildWhen
+    function subscribe(listener: StateListener<T>, buildWhen?: (prevState: T, nextState: T) => boolean): () => void {
+        listeners.add({ listener, buildWhen });
         listener(_state); // Инициализируем слушателя текущим состоянием
 
         // Возвращаем функцию для отписки
         return () => {
-            listeners.delete(listener);
+            listeners.forEach((entry) => {
+                if (entry.listener === listener) {
+                    listeners.delete(entry);
+                }
+            });
         };
     }
 

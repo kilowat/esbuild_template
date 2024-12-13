@@ -1,9 +1,9 @@
 
 import SvgIcon from "./svg-icon";
-import * as app from './app-example'
 import { MyCounterControlComponent } from "./counter-example";
+import { SharedCounter } from "./shared-counter";
 export {
     SvgIcon,
-    app,
-    MyCounterControlComponent
+    MyCounterControlComponent,
+    SharedCounter
 }

@@ -6,6 +6,7 @@ import { sassPlugin } from 'esbuild-sass-plugin';
 import esbuildPluginTsc from 'esbuild-plugin-tsc';
 import SvgPlugin from 'esbuild-plugin-svg';
 
+
 const buildPath = 'dist';
 const publicPath = '/';
 
@@ -38,7 +39,6 @@ const build = await esbuild.context({
   assetNames: 'assets/[name]-[hash]',
   write: true,
   tsconfig: 'tsconfig.json',
-  // external: ['./src/images/'],
   loader: {
     '.svg': 'text',
     '.png': 'file',
@@ -56,13 +56,6 @@ const build = await esbuild.context({
       filter: /\.scss$/i,
       type: 'css',
       loadPaths: ['./src/styles'],
-      /*
-      transform: async (rawSource) => {
-        //const source = rawSource.replace(/@images/, `${publicPath}/images`);
-        return rawSource.replace(/(url\(['"]?)(\.\.?\/)([^'")]+['"]?\))/g, `$1${publicPath}/$2$3`)
-        //return source;
-      }
-        */
     }),
     esbuildPluginTsc({
       force: true,
