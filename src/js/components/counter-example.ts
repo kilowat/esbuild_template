@@ -8,6 +8,12 @@ export class MyCounterControlComponent extends HTMLElement {
 
     unsubscribe!: () => void;
 
+    connectedCallback() {
+        this.unsubscribe = counterCubit.subscribe((state) => {
+            render(this.template(), this);
+        });
+    }
+
     template() {
         return html`
             <div>
@@ -16,16 +22,6 @@ export class MyCounterControlComponent extends HTMLElement {
                 </button>
             </div>
         `;
-    }
-
-    connectedCallback() {
-        this.addEventListener('click', () => {
-            increment();
-        });
-
-        this.unsubscribe = counterCubit.subscribe((state) => {
-            render(this.template(), this);
-        }, (prevState, nextState) => prevState != nextState);
     }
 
     disconnectedCallback() {
