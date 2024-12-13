@@ -1,27 +1,21 @@
-import { counterCubit } from "./counter-example";
-
-
+import { counterCubit } from "../cubits/useCounter";
 
 export class SharedCounter extends HTMLElement {
     constructor() {
         super();
     }
 
-
     block!: HTMLDivElement;
 
     unsubscribe!: () => void;
 
     connectedCallback() {
-        // Подписка на изменения состояния
         this.unsubscribe = counterCubit.subscribe((state) => {
             this.updateState(state);
         }, (prevState, nextState) => prevState != nextState);
     }
 
-    // Функция для обновления текста кнопок
     updateState(state: number) {
-        // Создаем начальную структуру DOM
         this.innerHTML = `
             <div>
                 ${state}
@@ -30,7 +24,6 @@ export class SharedCounter extends HTMLElement {
     }
 
     disconnectedCallback() {
-        // Здесь можно добавить логику отписки, если требуется
         this.unsubscribe();
     }
 }

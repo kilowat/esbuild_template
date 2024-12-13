@@ -2,6 +2,7 @@ export type StateListener<T> = (state: T) => void;
 
 // Определяем тип для cubit
 export type Cubit<T> = {
+    prevState: T,
     state: T;
     emit: (newState: T) => void;
     subscribe: (listener: StateListener<T>, buildWhen?: (prevState: T, nextState: T) => boolean) => () => void;
@@ -10,14 +11,15 @@ export type Cubit<T> = {
 // Функция для создания Cubit
 export function useCubit<T>(initialState: T) {
     let _state = initialState;
+    let _prevState = initialState;
     const listeners = new Set<{ listener: StateListener<T>; buildWhen?: (prevState: T, nextState: T) => boolean }>();
 
     // Изменение состояния и оповещение подписчиков
     function emit(newState: T): void {
-        const prevState = _state;
+        _prevState = _state;
         _state = newState;
         listeners.forEach(({ listener, buildWhen }) => {
-            if (!buildWhen || buildWhen(prevState, _state)) {
+            if (!buildWhen || buildWhen(_prevState, _state)) {
                 listener(_state);
             }
         });
@@ -40,7 +42,11 @@ export function useCubit<T>(initialState: T) {
 
     return {
         get state(): T {
+            console.log(_state)
             return _state;
+        },
+        get prevState(): T {
+            return _prevState;
         },
         emit,
         subscribe,
