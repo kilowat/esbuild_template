@@ -23,9 +23,7 @@
     "typescript": "^5.6.2"
   },
   "dependencies": {
-    "haunted": "^5.0.0",
     "lit-html": "^3.2.1",
-    "swiper": "^11.1.14",
-    "uhtml": "^4.7.0"
+    "swiper": "^11.1.14"
   }
 }
