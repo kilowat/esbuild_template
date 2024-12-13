@@ -51,6 +51,7 @@ const build = await esbuild.context({
     '.html': 'copy',
   },
   plugins: [
+
     sassPlugin({
       watch: true,
       filter: /\.scss$/i,
