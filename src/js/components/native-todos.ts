@@ -1,5 +1,7 @@
 import { html, nothing, render } from "lit-html";
-import todoCubit, { TodoItem } from "../cubits/useTodo";
+import { TodoItem, TodoState } from "../cubits/useTodo";
+import useTodo from "../cubits/useTodo";
+
 
 
 const buildItem = (item: TodoItem) => {
@@ -14,9 +16,8 @@ export class NativeTodos extends HTMLElement {
 
     unsubscribe!: () => void;
 
-    template() {
-        console.log(todoCubit.state)
-        const { isLoading, items } = todoCubit.state;
+    template(state: TodoState) {
+        const { isLoading, items } = state;
         return html`
             <div class="grid-view">
                 <div><button>add</button></div>
@@ -28,8 +29,10 @@ export class NativeTodos extends HTMLElement {
     }
 
     connectedCallback() {
-        todoCubit.subscribe(() => {
-            render(this.template(), this);
+        const todoCubit = useTodo();
+        todoCubit.subscribe((state) => {
+            render(this.template(state), this);
+            console.log(todoCubit.state.items)
         })
         todoCubit.fetchItems()
         todoCubit.fetchItems()
