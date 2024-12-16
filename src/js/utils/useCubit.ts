@@ -36,22 +36,20 @@ export function useCubit<T>(initialState: T) {
         };
     }
 
-    type CopyableState = T extends object ? T & { copy: (partialState: Partial<T>) => T } : T;
-
-    const stateProxy = typeof _state === 'object' && _state !== null
-        ? new Proxy(_state as T & { copy?: (partialState: Partial<T>) => T }, {
-            get(target, prop) {
-                if (prop === 'copy' && typeof target === 'object' && target !== null) {
-                    return (partialState: Partial<T>): T => ({ ...target, ...partialState });
-                }
-                return target[prop as keyof T];
-            },
-        })
-        : _state;
+    function copy(state: T, partialState: Partial<T>): T {
+        return typeof state === 'object' && state !== null
+            ? { ...state, ...partialState }
+            : partialState as T;
+    }
 
     return {
-        get state(): CopyableState {
-            return stateProxy as CopyableState;
+        get state(): T & { copy: (partialState: Partial<T>) => T } {
+            if (typeof _state === 'object' && _state !== null) {
+                return Object.assign({}, _state, {
+                    copy: (partialState: Partial<T>) => copy(_state, partialState)
+                });
+            }
+            return _state as T & { copy: (partialState: Partial<T>) => T };
         },
         get prevState(): T {
             return _prevState;
