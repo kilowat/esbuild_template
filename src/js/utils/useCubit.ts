@@ -37,7 +37,6 @@ export function useCubit<T>(initialState: T) {
 
     return {
         get state(): T {
-            console.log(_state)
             return _state;
         },
         get prevState(): T {
