@@ -2,9 +2,6 @@ import { html, render } from "lit-html";
 import { useCubit } from "../utils/useCubit";
 import { awaiter } from '../utils/awaiter';
 
-
-
-
 const gridCubit = useCubit({
     isLoading: false as boolean,
     items: [] as string[],
