@@ -10,6 +10,7 @@ export type Cubit<T> = {
 export function useCubit<T>(initialState: T) {
     let _state = initialState;
     let _prevState = initialState;
+
     const listeners = new Set<{ listener: StateListener<T>; buildWhen?: (prevState: T, nextState: T) => boolean }>();
 
     function emit(newState: T): void {
@@ -35,9 +36,20 @@ export function useCubit<T>(initialState: T) {
         };
     }
 
+    type CopyableState = T extends object ? T & { copy: (partialState: Partial<T>) => T } : T;
+
+    const stateProxy = new Proxy(_state as T & { copy?: (partialState: Partial<T>) => T }, {
+        get(target, prop) {
+            if (prop === 'copy' && typeof target === 'object' && target !== null) {
+                return (partialState: Partial<T>): T => ({ ...target, ...partialState });
+            }
+            return target[prop as keyof T];
+        },
+    });
+
     return {
-        get state(): T {
-            return _state;
+        get state(): CopyableState {
+            return stateProxy as CopyableState;
         },
         get prevState(): T {
             return _prevState;
