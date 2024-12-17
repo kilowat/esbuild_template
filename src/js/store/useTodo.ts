@@ -27,7 +27,9 @@ export default () => {
 
     const addItem = async () => {
         cubit.emit({ isLoading: true });
-        const items = await awaiter(1, [{ id: '1', name: 'test' }])
+        await awaiter(1, [])
+        const newItem = { id: (cubit.state.items.length + 1).toString(), name: 'test' };
+        const items = [...cubit.state.items, newItem];
         cubit.emit({ isLoading: false, items });
     }
 

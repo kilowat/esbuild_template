@@ -21,7 +21,7 @@ type ComponentLifecycle = {
 
 // Расширяем интерфейс HTMLElement
 interface ExtendedHTMLElement extends HTMLElement {
-    addDisconnectHandler?(handler: () => void): void;
+    addDisconnectHandler(handler: () => void): void;
     rerender?(): void;
 }
 

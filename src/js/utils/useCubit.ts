@@ -1,3 +1,5 @@
+import { render } from "lit-html/lit-html";
+
 export type StateListener<T> = (state: T) => void;
 export type BuildWhen<T> = (prevState: T, nextState: T) => boolean;
 
@@ -26,11 +28,6 @@ export function useCubit<T>(initialState: T) {
                 _state = newState as T;
             }
 
-            // Форсированное обновление через JSON parse/stringify
-            if (typeof _state === "object" && _state !== null) {
-                _state = JSON.parse(JSON.stringify(_state));
-            }
-
             // Уведомляем всех подписчиков
             _listeners.forEach(({ listener, buildWhen }) => {
                 if (!buildWhen || buildWhen(_prevState, _state)) {
@@ -44,7 +41,9 @@ export function useCubit<T>(initialState: T) {
             _listeners.add(entry);
 
             // Немедленный вызов листенера с текущим состоянием
-            listener(_state);
+            if (!buildWhen || buildWhen(_prevState, _state)) {
+                listener(_state);
+            }
 
             return () => {
                 _listeners.delete(entry);
@@ -52,12 +51,32 @@ export function useCubit<T>(initialState: T) {
         }
     };
 }
+export type Cubit<T> = ReturnType<typeof useCubit<T>>;
 
-export function listenCubit<T>(
-    cubit: ReturnType<typeof useCubit<T>>,
-    listener: StateListener<T>,
-    buildWhen?: BuildWhen<T>
-): () => void {
-    // Используем внутренний метод _subscribe
+export function listenCubit<T>({
+    cubit,
+    listener,
+    buildWhen,
+}: {
+    cubit: Cubit<T>;
+    listener: StateListener<T>;
+    buildWhen?: BuildWhen<T>;
+}): () => void {
     return (cubit as any)._subscribe(listener, buildWhen);
+}
+
+export function renderCubit<T>({
+    cubit,
+    element,
+    build,
+    buildWhen,
+}: {
+    cubit: Cubit<T>,
+    element: HTMLElement;
+    build: StateListener<T>;
+    buildWhen?: BuildWhen<T>;
+}): () => void {
+    return (cubit as any)._subscribe(() => {
+        render(build(cubit.state), element);
+    }, buildWhen);
 }
