@@ -1,4 +1,4 @@
-import { counterCubit } from "../store/useCounter";
+import { counterCubit } from "../cubit/useCounter";
 
 export class SharedCounter extends HTMLElement {
     constructor() {

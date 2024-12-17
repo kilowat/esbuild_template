@@ -1,5 +1,5 @@
 
-import { counterCubit, increment } from "../store/useCounter";
+import { counterCubit, increment } from "../cubit/useCounter";
 import { render, html } from 'lit-html';
 import { listenCubit } from "../utils/useCubit";
 
