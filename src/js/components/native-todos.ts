@@ -1,5 +1,5 @@
 import { html, nothing } from "lit-html";
-import { listenCubit, renderCubit, useCubit } from "../utils/useCubit";
+import { consumer, listenCubit, renderCubit, useCubit } from "../utils/useCubit";
 import { createWebComponent } from "../utils/component";
 import { awaiter } from "../utils/awaiter";
 
@@ -34,7 +34,7 @@ const addItem = async () => {
     cubit.emit({ status: 'ready' });
 }
 
-const build = (state: TodoState) => {
+const build = (state: Readonly<TodoState>) => {
     const { status, items } = state;
     const isLoading = status == 'loading';
 
@@ -59,19 +59,19 @@ const buildLoader = () => {
 export default createWebComponent('native-todos', {
     connect(element) {
         fetchItems();
-        listenCubit({
-            cubit,
-            listener: (state) => {
-                console.log('item was added ');
-            },
-            buildWhen: (prevState, nextState) => {
-                return prevState.status !== 'ready' && nextState.status == 'success';
-            }
-        })
     },
 
     render(element) {
-        renderCubit({ cubit, element, build });
-
+        consumer({
+            cubit,
+            element,
+            build,
+            listener: (state) => {
+                console.log('item was added ');
+            },
+            listenWhen: (prevState, nextState) => {
+                return nextState.status == 'success';
+            }
+        });
     },
 });
