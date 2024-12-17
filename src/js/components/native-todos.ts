@@ -1,6 +1,9 @@
 import { html, nothing, render } from "lit-html";
-import { TodoItem, TodoState } from "../cubits/useTodo";
-import useTodo from "../cubits/useTodo";
+import useTodo, { TodoItem, TodoState } from "../store/useTodo";
+
+import { listenCubit } from "../utils/useCubit";
+
+export const todoStore = useTodo();
 
 const buildItem = (item: TodoItem) => {
     return html`<div class="grid-item">${item.id}</div>`;
@@ -11,7 +14,7 @@ const buildLoader = () => {
 }
 
 export class NativeTodos extends HTMLElement {
-    unsubscribe!: () => void;
+    unsub!: () => void;
 
     template(state: TodoState) {
         const { isLoading, items } = state;
@@ -26,23 +29,15 @@ export class NativeTodos extends HTMLElement {
     }
 
     connectedCallback() {
-        const todoCubit = useTodo();
-        setTimeout(() => { console.log(todoCubit); }, 5000)
-        // Сохраняем возвращаемую функцию отписки
-        this.unsubscribe = todoCubit.subscribe((state) => {
+        this.unsub = listenCubit(todoStore.cubit, (state) => {
             render(this.template(state), this);
-            console.log(todoCubit);
         });
 
-        // Вызываем fetchItems() один раз
-        todoCubit.fetchItems();
+        todoStore.fetchItems();
     }
 
     disconnectedCallback() {
-        // Вызываем сохраненную функцию отписки
-        if (this.unsubscribe) {
-            this.unsubscribe();
-        }
+        this.unsub();
     }
 }
 

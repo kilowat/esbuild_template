@@ -1,6 +1,7 @@
 
-import { counterCubit, increment } from "../cubits/useCounter";
+import { counterCubit, increment } from "../store/useCounter";
 import { render, html } from 'lit-html';
+import { listenCubit } from "../utils/useCubit";
 
 export class MyCounterControlComponent extends HTMLElement {
     constructor() {
@@ -10,9 +11,9 @@ export class MyCounterControlComponent extends HTMLElement {
     unsubscribe!: () => void;
 
     connectedCallback() {
-        this.unsubscribe = counterCubit.subscribe((state) => {
+        this.unsubscribe = listenCubit(counterCubit, (state) => {
             render(this.template(), this);
-        });
+        })
     }
 
     template() {

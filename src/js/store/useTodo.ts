@@ -11,29 +11,30 @@ export interface TodoItem {
     name: string,
 }
 
+
 export default () => {
     const cubit = useCubit<TodoState>({
         isLoading: false,
         items: [],
     });
 
-    const { state, emit } = cubit;
 
     const fetchItems = async () => {
-        emit(state.copy({ isLoading: true }));
+        cubit.emit({ isLoading: true });
         const items = await awaiter(1, [{ id: '1', name: 'test' }])
-        emit(state.copy({ isLoading: false, items, }));
+        cubit.emit({ isLoading: false, items });
     }
 
     const addItem = async () => {
-        emit(state.copy({ isLoading: true }));
-        const items = await awaiter(1, [])
-        emit(state.copy({ isLoading: false, items, }));
+        cubit.emit({ isLoading: true });
+        const items = await awaiter(1, [{ id: '1', name: 'test' }])
+        cubit.emit({ isLoading: false, items });
     }
 
     return {
-        ...cubit,
+        cubit,
         fetchItems,
-        addItem
+        addItem,
     }
 }
+

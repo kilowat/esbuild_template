@@ -1,4 +1,4 @@
-import { counterCubit } from "../cubits/useCounter";
+import { counterCubit } from "../store/useCounter";
 
 export class SharedCounter extends HTMLElement {
     constructor() {
@@ -10,17 +10,7 @@ export class SharedCounter extends HTMLElement {
     unsubscribe!: () => void;
 
     connectedCallback() {
-        this.unsubscribe = counterCubit.subscribe((state) => {
-            this.updateState(state);
-        }, (prevState, nextState) => prevState != nextState);
-    }
 
-    updateState(state: number) {
-        this.innerHTML = `
-            <div>
-                ${state}
-            </div>
-        `;
     }
 
     disconnectedCallback() {
