@@ -1,5 +1,5 @@
 import { html, nothing } from "lit-html";
-import { consumer, listenCubit, renderCubit, useCubit } from "../utils/useCubit";
+import { consumer, useCubit } from "../utils/useCubit";
 import { createWebComponent } from "../utils/component";
 import { awaiter } from "../utils/awaiter";
 
@@ -34,20 +34,6 @@ const addItem = async () => {
     cubit.emit({ status: 'ready' });
 }
 
-const build = (state: Readonly<TodoState>) => {
-    const { status, items } = state;
-    const isLoading = status == 'loading';
-
-    return html`
-        <div class="grid-view">
-            <div><button  @click=${addItem} ?disabled=${isLoading}>add</button></div>
-            <div class="grid">
-                ${isLoading ? buildLoader() : nothing}
-                ${items.map(buildItem)}
-            </div>
-        </div>`;
-}
-
 const buildItem = (item: TodoItem) => {
     return html`<div class="grid-item">${item.id}</div>`;
 }
@@ -56,7 +42,47 @@ const buildLoader = () => {
     return html`...loading`;
 }
 
-export default createWebComponent('native-todos', {
+
+const build = () => {
+    const { status, items } = cubit.state;
+    const isLoading = status == 'loading';
+
+    return html`
+        <div class="grid-view">
+            <div><button  @click=${addItem} ?disabled=${isLoading}>add</button></div>
+            <div class="grid">
+                ${isLoading ? buildLoader() : nothing}
+                ${items.map(buildItem)}
+                <test-todo></test-doto>
+                <test-todo2></test-doto2>
+            </div>
+        </div>`;
+}
+
+createWebComponent('test-todo2', {
+    render(element) {
+        return html`test`
+    },
+});
+
+
+createWebComponent('test-todo', {
+    render(element) {
+        consumer({
+            cubit,
+            element,
+            build(state) {
+                return html`<b>${JSON.stringify(state)}</b>`
+            },
+            buildWhen: (prevState, nextState) => {
+                return nextState.items.length < 10;
+            }
+        })
+    },
+});
+
+
+createWebComponent('native-todos', {
     connect(element) {
         fetchItems();
     },
