@@ -1,6 +1,6 @@
 import { html, nothing } from "lit-html";
 import { Consumer } from "../utils/useCubit";
-import { createWebComponent } from "../utils/component";
+import { useComponent } from "../utils/useComponent";
 import { TodoItem, useTodo } from "../cubits/useTodo";
 
 export const todoCubit = useTodo();
@@ -15,10 +15,10 @@ const buildLoader = (isActive: boolean = false) => {
 }
 
 //Example loader by component
-createWebComponent('todo-loader', {
+useComponent('todo-loader', {
     render(element) {
         return Consumer({
-            cubit: todoCubit.ctx,
+            cubit: todoCubit.cubit,
             element,
             build() {
                 const text = todoCubit.isLoading ? '...loading' : 'ready';
@@ -28,12 +28,12 @@ createWebComponent('todo-loader', {
     },
 })
 
-export default createWebComponent('native-todos', {
+export default useComponent('native-todos', {
     connect(element) {
         todoCubit.fetchItems();
     },
     render: (element) => Consumer({
-        cubit: todoCubit.ctx,
+        cubit: todoCubit.cubit,
         element,
         build: ({ state }) => {
             return html`

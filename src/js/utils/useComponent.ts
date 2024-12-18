@@ -28,7 +28,7 @@ interface ExtendedHTMLElement extends HTMLElement {
     _unsubscribeState?: () => void;
 }
 
-export const createWebComponent = (
+export const useComponent = (
     tagName: string,
     lifecycle: ComponentLifecycle = {},
     options: WebComponentAttributes = {}

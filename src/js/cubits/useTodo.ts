@@ -15,36 +15,36 @@ export interface TodoItem {
 }
 
 export function useTodo() {
-    const ctx = useCubit<TodoState>({
+    const cubit = useCubit<TodoState>({
         items: [],
         status: 'ready',
 
     });
 
     const fetchItems = async () => {
-        ctx.emit({ status: 'loading' });
+        cubit.emit({ status: 'loading' });
         const items = await awaiter(1, [{ id: '1', name: 'test' }]);
-        ctx.emit({ status: 'ready', items });
+        cubit.emit({ status: 'ready', items });
     }
 
     const addItem = async () => {
-        ctx.emit({ status: 'loading' });
+        cubit.emit({ status: 'loading' });
         await awaiter(1, []);
         const newItem = {
-            id: (ctx.state.items.length + 1).toString(),
+            id: (cubit.state.items.length + 1).toString(),
             name: 'test'
         };
-        const items = [...ctx.state.items, newItem];
-        ctx.emit({ status: 'success', items });
-        ctx.emit({ status: 'ready' });
+        const items = [...cubit.state.items, newItem];
+        cubit.emit({ status: 'success', items });
+        cubit.emit({ status: 'ready' });
     }
 
     return {
-        ctx,
+        cubit,
         fetchItems,
         addItem,
         get isLoading() {
-            return ctx.state.status === 'loading';
+            return cubit.state.status === 'loading';
         },
     };
 }
