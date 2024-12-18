@@ -7,8 +7,6 @@ export interface TodoState {
     status: 'ready' | 'success' | 'loading' | 'error',
 }
 
-
-
 export interface TodoItem {
     id: string,
     name: string,
