@@ -1,28 +1,31 @@
+import { html, render } from "lit-html/lit-html";
+import { consumer } from "./useCubit";
+
 type WebComponentAttributes = {
     observedAttributes?: string[];
     defaultAttributes?: Record<string, any>;
 };
 
+type RenderResult = ReturnType<typeof html> | ReturnType<typeof consumer>;
+
 type ComponentLifecycle = {
     construct?: () => void;
     connect?: (element: ExtendedHTMLElement) => void;
     disconnect?: (element: ExtendedHTMLElement) => void;
-    render?: (element: ExtendedHTMLElement) => void;
-
+    render?: (element: ExtendedHTMLElement) => RenderResult;
     attributeChanged?: (
         name: string,
         oldValue: string | null,
         newValue: string | null,
         element: ExtendedHTMLElement
     ) => void;
-
     adoptedCallback?: (oldDocument: Document, newDocument: Document) => void;
 };
 
-// Расширяем интерфейс HTMLElement
 interface ExtendedHTMLElement extends HTMLElement {
     addDisconnectHandler(handler: () => void): void;
     rerender?(): void;
+    _unsubscribeState?: () => void;
 }
 
 export const createWebComponent = (
@@ -41,6 +44,7 @@ export const createWebComponent = (
         }
 
         private disconnectHandler?: () => void;
+        _unsubscribeState?: () => void;
 
         constructor() {
             super();
@@ -67,11 +71,16 @@ export const createWebComponent = (
             }
 
             if (lifecycle.render) {
-                lifecycle.render(this);
+                this.processRenderResult(lifecycle.render(this));
             }
         }
 
         disconnectedCallback() {
+            // Отписываемся от состояния перед удалением компонента
+            if (this._unsubscribeState) {
+                this._unsubscribeState();
+            }
+
             if (lifecycle.disconnect) {
                 lifecycle.disconnect(this);
             }
@@ -97,14 +106,28 @@ export const createWebComponent = (
             }
         }
 
-        // Добавляем публичные методы с реализацией
         addDisconnectHandler(handler: () => void) {
             this.disconnectHandler = handler;
         }
 
         rerender() {
             if (lifecycle.render) {
-                lifecycle.render(this);
+                this.processRenderResult(lifecycle.render(this));
+            }
+        }
+
+        private processRenderResult(result: RenderResult) {
+            // Отписываемся от предыдущей подписки, если она была
+            if (this._unsubscribeState) {
+                this._unsubscribeState();
+            }
+
+            if (result instanceof Function) {
+                // Если это результат consumer, сохраняем возвращаемую функцию отписки
+                this._unsubscribeState = result;
+            } else {
+                // Если это html из lit-html, просто рендерим
+                render(result, this);
             }
         }
     };

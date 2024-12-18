@@ -7,6 +7,7 @@ import esbuildPluginTsc from 'esbuild-plugin-tsc';
 import SvgPlugin from 'esbuild-plugin-svg';
 
 
+
 const buildPath = 'dist';
 const publicPath = '/';
 
@@ -51,7 +52,6 @@ const build = await esbuild.context({
     '.html': 'copy',
   },
   plugins: [
-
     sassPlugin({
       watch: true,
       filter: /\.scss$/i,

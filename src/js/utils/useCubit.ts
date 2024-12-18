@@ -13,6 +13,7 @@ export function useCubit<T>(initialState: T) {
         element?: HTMLElement;
         buildWhen?: BuildWhen<T>;
         listenWhen?: ListenWhen<T>;
+        autoUnsubscribe?: boolean;
     }>();
 
     return {
@@ -31,8 +32,7 @@ export function useCubit<T>(initialState: T) {
                 _state = newState as T;
             }
 
-            _listeners.forEach(({ listener, build, element, buildWhen, listenWhen }) => {
-                // Отдельные условия для build и listener
+            _listeners.forEach(({ listener, build, element, buildWhen, listenWhen, autoUnsubscribe }) => {
                 const shouldBuild = build && element && (!buildWhen || buildWhen(_prevState, _state));
                 const shouldListen = listener && (!listenWhen || listenWhen(_prevState, _state));
 
@@ -43,6 +43,11 @@ export function useCubit<T>(initialState: T) {
                 if (shouldListen) {
                     listener(_state);
                 }
+
+                // Удаляем автоматически подписку, если включен autoUnsubscribe
+                if (autoUnsubscribe && shouldBuild) {
+                    _listeners.delete({ listener, build, element, buildWhen, listenWhen, autoUnsubscribe });
+                }
             });
         },
         _subscribe(
@@ -50,12 +55,12 @@ export function useCubit<T>(initialState: T) {
             build?: (state: T) => unknown,
             element?: HTMLElement,
             buildWhen?: BuildWhen<T>,
-            listenWhen?: ListenWhen<T>
+            listenWhen?: ListenWhen<T>,
+            autoUnsubscribe: boolean = false
         ): () => void {
-            const entry = { listener, build, element, buildWhen, listenWhen };
+            const entry = { listener, build, element, buildWhen, listenWhen, autoUnsubscribe };
             _listeners.add(entry);
 
-            // Отдельные условия для build и listener при первоначальной подписке
             const shouldBuild = build && element && (!buildWhen || buildWhen(_prevState, _state));
             const shouldListen = listener && (!listenWhen || listenWhen(_prevState, _state));
 
@@ -91,11 +96,13 @@ export function consumer<T>({
     buildWhen?: BuildWhen<Readonly<T>>;
     listenWhen?: ListenWhen<Readonly<T>>;
 }): () => void {
+    // Добавляем автоматическую отписку по умолчанию
     return (cubit as any)._subscribe(
         listener,
         build,
         element,
         buildWhen,
-        listenWhen
+        listenWhen,
+        true  // autoUnsubscribe = true
     );
 }
