@@ -1,43 +1,56 @@
 import { html, nothing } from "lit-html";
 import { Consumer } from "../utils/useCubit";
 import { createWebComponent } from "../utils/component";
-import { TodoItem } from "../cubits/useTodo";
-import { useTodo } from "../cubits/useTodo";
+import { TodoItem, useTodo } from "../cubits/useTodo";
 
 export const todoCubit = useTodo();
 
 const buildItem = (item: TodoItem) => {
     return html`<div class="grid-item">${item.id}</div>`;
 }
-
-const buildLoader = () => {
-    return html`...loading`;
+// example by build function can reuse in any place
+const buildLoader = (isActive: boolean = false) => {
+    const text = isActive ? '...loading' : 'ready';
+    return html`${text}`
 }
+
+//Example loader by component
+createWebComponent('todo-loader', {
+    render(element) {
+        return Consumer({
+            cubit: todoCubit.ctx,
+            element,
+            build() {
+                const text = todoCubit.isLoading ? '...loading' : 'ready';
+                return html`${text}`
+            },
+        })
+    },
+})
 
 export default createWebComponent('native-todos', {
     connect(element) {
         todoCubit.fetchItems();
     },
     render: (element) => Consumer({
-        cubit: todoCubit,
+        cubit: todoCubit.ctx,
         element,
-        build: (state) => {
-            const { isLoading, addItem } = todoCubit;
-
+        build: ({ state }) => {
             return html`
                 <div class="grid-view">
-                    <div><button  @click=${addItem} ?disabled=${isLoading}>add</button></div>
+                    <div><button  @click=${todoCubit.addItem} ?disabled=${todoCubit.isLoading}>add</button></div>
                     <div class="grid">
-                        ${isLoading ? buildLoader() : nothing}
+                        <todo-loader></todo-loader>
+                        ${buildLoader(todoCubit.isLoading)}
                         ${state.items.map(buildItem)}
                     </div>
                 </div>`;
         }
         ,
-        listener: (state) => {
+        listener: () => {
             console.log('item was added ');
         },
-        listenWhen: (prevState, nextState) => {
+        listenWhen: ({ nextState }) => {
             return nextState.status == 'success';
         }
     }),

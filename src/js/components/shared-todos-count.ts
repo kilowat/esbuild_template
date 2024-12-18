@@ -7,9 +7,9 @@ import { todoCubit } from "./native-todos";
 export default createWebComponent('shared-todos-count', {
     render(element) {
         return Consumer({
-            cubit: todoCubit,
+            cubit: todoCubit.ctx,
             element,
-            build(state) {
+            build({ state }) {
                 return html`<div class="todo-count">Count:${state.items.length}</div>`
             },
         })
