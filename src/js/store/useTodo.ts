@@ -12,34 +12,28 @@ export interface TodoItem {
 }
 
 export default () => {
-    const cubit = useCubit<TodoState>({
-        items: [],
-        status: 'ready',
-
-    });
-
-    const fetchItems = async () => {
-        cubit.emit({ status: 'loading' });
-        const items = await awaiter(1, [{ id: '1', name: 'test' }])
-        cubit.emit({ status: 'ready', items });
-    }
-
-    const addItem = async () => {
-        cubit.emit({ status: 'loading' });
-        await awaiter(1, [])
-        const newItem = { id: (cubit.state.items.length + 1).toString(), name: 'test' };
-        const items = [...cubit.state.items, newItem];
-        cubit.emit({ status: 'success', items });
-        cubit.emit({ status: 'ready' });
-    }
-
-    return {
-        cubit,
-        fetchItems,
-        addItem,
-        get isLoading() {
-            return cubit.state.status == 'loading';
+    return useCubit<TodoState>({
+        state: {
+            items: [],
+            status: 'ready',
+        },
+        actions: {
+            fetchItems: async ({ emit }) => {
+                emit({ status: 'loading' });
+                const items = await awaiter(1, [{ id: '1', name: 'test' }])
+                emit({ status: 'ready', items });
+            },
+            addItem: async ({ emit, state }) => {
+                emit({ status: 'loading' });
+                await awaiter(1, [])
+                const newItem = { id: (state.items.length + 1).toString(), name: 'test' };
+                const items = [...state.items, newItem];
+                emit({ status: 'success', items });
+                emit({ status: 'ready' });
+            },
+        },
+        getters: {
+            isLoading: ({ state }) => { state.status == 'loading' }
         }
-    }
+    });
 }
-

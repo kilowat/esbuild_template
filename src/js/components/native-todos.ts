@@ -3,7 +3,7 @@ import { consumer } from "../utils/useCubit";
 import { createWebComponent } from "../utils/component";
 import useTodo, { TodoItem } from "../store/useTodo";
 
-export const todoStore = useTodo();
+export const todoCubit = useTodo();
 
 const buildItem = (item: TodoItem) => {
     return html`<div class="grid-item">${item.id}</div>`;
@@ -15,14 +15,14 @@ const buildLoader = () => {
 
 export default createWebComponent('native-todos', {
     connect(element) {
-        todoStore.fetchItems();
+        todoCubit.actions.fetchItems();
     },
     render: (element) => consumer({
-        cubit: todoStore.cubit,
+        cubit: todoCubit,
         element,
         build: (state) => {
-            const { isLoading, addItem } = todoStore;
-
+            const { isLoading } = todoCubit.getters;
+            const { addItem } = todoCubit.actions;
             return html`
                 <div class="grid-view">
                     <div><button  @click=${addItem} ?disabled=${isLoading}>add</button></div>

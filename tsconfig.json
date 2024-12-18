@@ -5,7 +5,7 @@
     "allowJs": true,
     "maxNodeModuleJsDepth": 2,
     "module": "ESNext", // или "module": "ES6"
-    "target": "ESNext", // для использования последних возможностей JS
+    "target": "ES2019",
     "moduleResolution": "node", // для правильного разрешения модулей
     "esModuleInterop": true, // для совместимости с CommonJS
     "skipLibCheck": true, // для ускорения компиляции
@@ -15,7 +15,7 @@
       ]
     },
     "lib": [
-      "ES2015",
+      "ES2019",
       "DOM"
     ],
   },
