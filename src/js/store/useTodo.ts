@@ -2,7 +2,7 @@ import { awaiter } from "../utils/awaiter";
 import { useCubit } from "../utils/useCubit";
 
 
-export interface TodoState {
+interface TodoState {
     items: TodoItem[],
     status: 'ready' | 'success' | 'loading' | 'error',
 }
@@ -13,11 +13,12 @@ export interface TodoItem {
 }
 
 export function useTodo() {
-    const cubit = useCubit<TodoState>({
+    const state: TodoState = {
         items: [],
         status: 'ready',
+    };
 
-    });
+    const cubit = useCubit(state);
 
     const fetchItems = async () => {
         cubit.emit({ status: 'loading' });
