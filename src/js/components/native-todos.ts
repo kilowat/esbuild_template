@@ -21,7 +21,7 @@ export default createWebComponent('native-todos', {
         cubit: todoCubit,
         element,
         build: (state) => {
-            const { isLoading } = todoCubit.getters;
+            const isLoading = todoCubit.state.status == 'loading';
             const { addItem } = todoCubit.actions;
             return html`
                 <div class="grid-view">
