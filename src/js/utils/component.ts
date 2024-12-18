@@ -10,16 +10,27 @@ type RenderResult = ReturnType<typeof html> | ReturnType<typeof Consumer>;
 
 type ComponentLifecycle = {
     construct?: () => void;
-    connect?: (element: ExtendedHTMLElement) => void;
-    disconnect?: (element: ExtendedHTMLElement) => void;
-    render?: (element: ExtendedHTMLElement) => RenderResult;
-    attributeChanged?: (
-        name: string,
-        oldValue: string | null,
-        newValue: string | null,
-        element: ExtendedHTMLElement
-    ) => void;
-    adoptedCallback?: (oldDocument: Document, newDocument: Document) => void;
+    connect?: ({ element }: { element: ExtendedHTMLElement }) => void;
+    disconnect?: ({ element }: { element: ExtendedHTMLElement }) => void;
+    render?: ({ element }: { element: ExtendedHTMLElement }) => RenderResult;
+    attributeChanged?: ({
+        name,
+        oldValue,
+        newValue,
+        element
+    }: {
+        name: string;
+        oldValue: string | null;
+        newValue: string | null;
+        element: ExtendedHTMLElement;
+    }) => void;
+    adoptedCallback?: ({
+        oldDocument,
+        newDocument
+    }: {
+        oldDocument: Document;
+        newDocument: Document;
+    }) => void;
 };
 
 interface ExtendedHTMLElement extends HTMLElement {
@@ -28,7 +39,7 @@ interface ExtendedHTMLElement extends HTMLElement {
     _unsubscribeState?: () => void;
 }
 
-export const useComponent = (
+export const createComponent = (
     tagName: string,
     lifecycle: ComponentLifecycle = {},
     options: WebComponentAttributes = {}
@@ -67,22 +78,21 @@ export const useComponent = (
 
         connectedCallback() {
             if (lifecycle.connect) {
-                lifecycle.connect(this);
+                lifecycle.connect({ element: this });
             }
 
             if (lifecycle.render) {
-                this.processRenderResult(lifecycle.render(this));
+                this.processRenderResult(lifecycle.render({ element: this }));
             }
         }
 
         disconnectedCallback() {
-            // Отписываемся от состояния перед удалением компонента
             if (this._unsubscribeState) {
                 this._unsubscribeState();
             }
 
             if (lifecycle.disconnect) {
-                lifecycle.disconnect(this);
+                lifecycle.disconnect({ element: this });
             }
 
             if (this.disconnectHandler) {
@@ -96,13 +106,21 @@ export const useComponent = (
             newValue: string | null
         ) {
             if (lifecycle.attributeChanged) {
-                lifecycle.attributeChanged(name, oldValue, newValue, this);
+                lifecycle.attributeChanged({
+                    name,
+                    oldValue,
+                    newValue,
+                    element: this
+                });
             }
         }
 
         adoptedCallback(oldDocument: Document, newDocument: Document) {
             if (lifecycle.adoptedCallback) {
-                lifecycle.adoptedCallback(oldDocument, newDocument);
+                lifecycle.adoptedCallback({
+                    oldDocument,
+                    newDocument
+                });
             }
         }
 
@@ -112,21 +130,18 @@ export const useComponent = (
 
         rerender() {
             if (lifecycle.render) {
-                this.processRenderResult(lifecycle.render(this));
+                this.processRenderResult(lifecycle.render({ element: this }));
             }
         }
 
         private processRenderResult(result: RenderResult) {
-            // Отписываемся от предыдущей подписки, если она была
             if (this._unsubscribeState) {
                 this._unsubscribeState();
             }
 
             if (result instanceof Function) {
-                // Если это результат consumer, сохраняем возвращаемую функцию отписки
                 this._unsubscribeState = result;
             } else {
-                // Если это html из lit-html, просто рендерим
                 render(result, this);
             }
         }

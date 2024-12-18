@@ -1,15 +1,15 @@
 import { render } from "lit-html/lit-html";
 
-export type StateListener<T> = (state: T) => void;
-export type BuildWhen<T> = (prevState: T, nextState: T) => boolean;
-export type ListenWhen<T> = (prevState: T, nextState: T) => boolean;
+export type StateListener<T> = ({ state }: { state: T }) => void;
+export type BuildWhen<T> = ({ prevState, nextState }: { prevState: T; nextState: T }) => boolean;
+export type ListenWhen<T> = ({ prevState, nextState }: { prevState: T; nextState: T }) => boolean;
 
 export abstract class Cubit<T> {
     protected _state: T;
     protected _prevState: T;
     protected _listeners: Set<{
         listener?: StateListener<T>;
-        build?: (state: T) => unknown;
+        build?: (state: { state: T }) => unknown;
         element?: HTMLElement;
         buildWhen?: BuildWhen<T>;
         listenWhen?: ListenWhen<T>;
@@ -41,22 +41,22 @@ export abstract class Cubit<T> {
 
         // Notify listeners
         this._listeners.forEach(({ listener, build, element, buildWhen, listenWhen }) => {
-            const shouldBuild = build && element && (!buildWhen || buildWhen(this._prevState, this._state));
-            const shouldListen = listener && (!listenWhen || listenWhen(this._prevState, this._state));
+            const shouldBuild = build && element && (!buildWhen || buildWhen({ prevState: this._prevState, nextState: this._state }));
+            const shouldListen = listener && (!listenWhen || listenWhen({ prevState: this._prevState, nextState: this._state }));
 
             if (shouldBuild) {
-                render(build(this._state), element);
+                render(build({ state: this._state }), element);
             }
 
             if (shouldListen) {
-                listener(this._state);
+                listener({ state: this._state });
             }
         });
     }
 
     protected _subscribe(
         listener?: StateListener<T>,
-        build?: (state: T) => unknown,
+        build?: (state: { state: T }) => unknown,
         element?: HTMLElement,
         buildWhen?: BuildWhen<T>,
         listenWhen?: ListenWhen<T>,
@@ -64,15 +64,15 @@ export abstract class Cubit<T> {
         const entry = { listener, build, element, buildWhen, listenWhen };
         this._listeners.add(entry);
 
-        const shouldBuild = build && element && (!buildWhen || buildWhen(this._prevState, this._state));
-        const shouldListen = listener && (!listenWhen || listenWhen(this._prevState, this._state));
+        const shouldBuild = build && element && (!buildWhen || buildWhen({ prevState: this._prevState, nextState: this._state }));
+        const shouldListen = listener && (!listenWhen || listenWhen({ prevState: this._prevState, nextState: this._state }));
 
         if (shouldBuild) {
-            render(build(this._state), element);
+            render(build({ state: this._state }), element);
         }
 
         if (shouldListen) {
-            listener(this._state);
+            listener({ state: this._state });
         }
 
         return () => {
@@ -92,11 +92,10 @@ export function Consumer<T>({
     cubit: Cubit<T>;
     listener?: StateListener<Readonly<T>>;
     element?: HTMLElement;
-    build?: (state: Readonly<T>) => unknown;
+    build?: (state: { state: Readonly<T> }) => unknown;
     buildWhen?: BuildWhen<Readonly<T>>;
     listenWhen?: ListenWhen<Readonly<T>>;
 }): () => void {
-    // Add automatic unsubscription by default
     return cubit['_subscribe'](
         listener,
         build,
