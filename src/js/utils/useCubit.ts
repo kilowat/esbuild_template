@@ -16,51 +16,18 @@ export function useCubit<T>(initialState: T) {
         autoUnsubscribe?: boolean;
     }>();
 
-    return {
-        get state(): Readonly<T> {
-            return _state;
-        },
-        get prevState(): T {
-            return _prevState;
-        },
-        emit(newState: Partial<T> | T): void {
-            _prevState = _state;
+    function emit(newState: Partial<T> | T): void {
+        _prevState = _state;
 
-            if (typeof _state === "object" && _state !== null && typeof newState === "object") {
-                _state = { ..._state, ...newState } as T;
-            } else {
-                _state = newState as T;
-            }
+        // Handle state update for objects and primitive types
+        if (typeof _state === "object" && _state !== null && typeof newState === "object") {
+            _state = { ..._state, ...newState } as T;
+        } else {
+            _state = newState as T;
+        }
 
-            _listeners.forEach(({ listener, build, element, buildWhen, listenWhen, autoUnsubscribe }) => {
-                const shouldBuild = build && element && (!buildWhen || buildWhen(_prevState, _state));
-                const shouldListen = listener && (!listenWhen || listenWhen(_prevState, _state));
-
-                if (shouldBuild) {
-                    render(build(_state), element);
-                }
-
-                if (shouldListen) {
-                    listener(_state);
-                }
-
-                // Удаляем автоматически подписку, если включен autoUnsubscribe
-                if (autoUnsubscribe && shouldBuild) {
-                    _listeners.delete({ listener, build, element, buildWhen, listenWhen, autoUnsubscribe });
-                }
-            });
-        },
-        _subscribe(
-            listener?: StateListener<T>,
-            build?: (state: T) => unknown,
-            element?: HTMLElement,
-            buildWhen?: BuildWhen<T>,
-            listenWhen?: ListenWhen<T>,
-            autoUnsubscribe: boolean = false
-        ): () => void {
-            const entry = { listener, build, element, buildWhen, listenWhen, autoUnsubscribe };
-            _listeners.add(entry);
-
+        // Notify listeners
+        _listeners.forEach(({ listener, build, element, buildWhen, listenWhen }) => {
             const shouldBuild = build && element && (!buildWhen || buildWhen(_prevState, _state));
             const shouldListen = listener && (!listenWhen || listenWhen(_prevState, _state));
 
@@ -71,17 +38,52 @@ export function useCubit<T>(initialState: T) {
             if (shouldListen) {
                 listener(_state);
             }
+        });
+    }
 
-            return () => {
-                _listeners.delete(entry);
-            };
+    function _subscribe(
+        listener?: StateListener<T>,
+        build?: (state: T) => unknown,
+        element?: HTMLElement,
+        buildWhen?: BuildWhen<T>,
+        listenWhen?: ListenWhen<T>,
+    ): () => void {
+        const entry = { listener, build, element, buildWhen, listenWhen };
+        _listeners.add(entry);
+
+        const shouldBuild = build && element && (!buildWhen || buildWhen(_prevState, _state));
+        const shouldListen = listener && (!listenWhen || listenWhen(_prevState, _state));
+
+        if (shouldBuild) {
+            render(build(_state), element);
         }
+
+        if (shouldListen) {
+            listener(_state);
+        }
+
+        return () => {
+            _listeners.delete(entry);
+        };
+    }
+
+    return {
+        get state() {
+            return _state;
+        },
+
+        get prevState() {
+            return _prevState;
+        },
+
+        emit,
+        _subscribe
     };
 }
 
-export type Cubit<T> = ReturnType<typeof useCubit<T>>;
+export type CubitType<T> = ReturnType<typeof useCubit<T>>;
 
-export function consumer<T>({
+export function Consumer<T>({
     cubit,
     element,
     build,
@@ -89,20 +91,19 @@ export function consumer<T>({
     listener,
     listenWhen,
 }: {
-    cubit: Cubit<T>;
+    cubit: CubitType<T>;
     listener?: StateListener<Readonly<T>>;
     element?: HTMLElement;
     build?: (state: Readonly<T>) => unknown;
     buildWhen?: BuildWhen<Readonly<T>>;
     listenWhen?: ListenWhen<Readonly<T>>;
 }): () => void {
-    // Добавляем автоматическую отписку по умолчанию
-    return (cubit as any)._subscribe(
+    // Add automatic unsubscription by default
+    return cubit._subscribe(
         listener,
         build,
         element,
         buildWhen,
         listenWhen,
-        true  // autoUnsubscribe = true
     );
 }

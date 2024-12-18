@@ -1,12 +1,12 @@
 import { html, render } from "lit-html/lit-html";
-import { consumer } from "./useCubit";
+import { Consumer } from "./cubit";
 
 type WebComponentAttributes = {
     observedAttributes?: string[];
     defaultAttributes?: Record<string, any>;
 };
 
-type RenderResult = ReturnType<typeof html> | ReturnType<typeof consumer>;
+type RenderResult = ReturnType<typeof html> | ReturnType<typeof Consumer>;
 
 type ComponentLifecycle = {
     construct?: () => void;

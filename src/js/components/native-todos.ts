@@ -1,9 +1,10 @@
 import { html, nothing } from "lit-html";
-import { consumer } from "../utils/useCubit";
+import { Consumer } from "../utils/useCubit";
 import { createWebComponent } from "../utils/component";
-import useTodo, { TodoItem } from "../store/useTodo";
+import { TodoItem } from "../cubits/useTodo";
+import { useTodo } from "../cubits/useTodo";
 
-export const todoStore = useTodo();
+export const todoCubit = useTodo();
 
 const buildItem = (item: TodoItem) => {
     return html`<div class="grid-item">${item.id}</div>`;
@@ -15,13 +16,13 @@ const buildLoader = () => {
 
 export default createWebComponent('native-todos', {
     connect(element) {
-        todoStore.fetchItems();
+        todoCubit.fetchItems();
     },
-    render: (element) => consumer({
-        cubit: todoStore.cubit,
+    render: (element) => Consumer({
+        cubit: todoCubit,
         element,
         build: (state) => {
-            const { isLoading, addItem } = todoStore;
+            const { isLoading, addItem } = todoCubit;
 
             return html`
                 <div class="grid-view">
