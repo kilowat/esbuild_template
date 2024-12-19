@@ -1,43 +1,57 @@
-const createContext = () => {
-    // Храним фабрики и глобальные инстансы
-    const providers = new Map<Function, () => any>();
-    const globalInstances = new Map<Function, any>();
-    const localInstances = new WeakMap<HTMLElement, Map<Function, any>>();
+// Define base types for type inference
 
-    const provide = <T>(type: Function, factory: () => T): void => {
-        providers.set(type, factory);
+import { Provider } from "./types";
+
+
+// Create helper for defining providers
+export const createProvider = <T>(): Provider<T> => ({
+    token: Symbol(),
+    factory: null as any
+});
+
+// Updated context creation
+const createContext = () => {
+    const providers = new Map<symbol, () => any>();
+    const globalInstances = new Map<symbol, any>();
+    const localInstances = new WeakMap<HTMLElement, Map<symbol, any>>();
+
+    const provide = <T>(provider: Provider<T>, factory: () => T): void => {
+        provider.factory = factory;
+        providers.set(provider.token, factory);
     };
 
-    const read = <T>(element: HTMLElement, type: Function): T => {
-        // Проверяем локальные инстансы
+    const read = <T>(element: HTMLElement, provider: Provider<T>): T => {
+        const token = provider.token;
+
+        // Check local instances
         const localMap = localInstances.get(element);
-        if (localMap?.has(type)) {
-            return localMap.get(type) as T;
+        if (localMap?.has(token)) {
+            return localMap.get(token) as T;
         }
 
-        // Проверяем глобальные инстансы
-        if (globalInstances.has(type)) {
-            return globalInstances.get(type) as T;
+        // Check global instances
+        if (globalInstances.has(token)) {
+            return globalInstances.get(token) as T;
         }
 
-        // Ищем провайдер
-        const factory = providers.get(type);
+        // Find provider
+        const factory = providers.get(token);
         if (!factory) {
             throw new Error(
-                `No provider found for the requested type. Ensure the type is registered with provide().`
+                `No provider found for the requested token. Ensure the provider is registered with provide().`
             );
         }
 
-        // Создаем новый инстанс
+        // Create new instance
         const instance = factory();
 
-        // Сохраняем инстанс либо глобально, либо локально
+        // Save instance either globally or locally
         if (element.hasAttribute('local-provider')) {
             const localMap = localInstances.get(element) || new Map();
-            localMap.set(type, instance);
+            localMap.set(token, instance);
             localInstances.set(element, localMap);
         } else {
-            globalInstances.set(type, instance);
+            globalInstances.set(token, instance);
         }
 
         return instance as T;

@@ -1,41 +1,36 @@
 import { render } from "lit-html/lit-html";
 import { globalContext } from "./context";
-import { ComponentConfig } from "./types";
+import { ComponentConfig, Provider, ProviderConfig } from "./types";
 
-
-// Обновленный TypedHTMLElement
+// Updated base element class with typed read method
 export abstract class TypedHTMLElement extends HTMLElement {
-    read<T>(type: Function): T {
-        return globalContext.read(this, type);
+    read<T>(provider: Provider<T>): T {
+        return globalContext.read(this, provider);
     }
 
-    // Утилитный метод для установки локального провайдера
     setLocalProvider(): void {
         this.setAttribute('local-provider', '');
     }
 }
 
-// Обновленный компонент
+// Updated component creation
 export const createComponent = (tagName: string, config: ComponentConfig) => {
     const Component = class extends TypedHTMLElement {
         private unsubscribers: Array<() => void> = [];
 
         connectedCallback() {
-            // Если есть локальные провайдеры, помечаем элемент
             if (config.providers?.some(provider => provider)) {
                 this.setLocalProvider();
             }
 
-            // Регистрируем провайдеры
             if (config.providers) {
-                config.providers.forEach(({ type, create, lazy }) => {
+                config.providers.forEach(({ provider: type, create, lazy }) => {
                     if (!lazy) {
                         globalContext.provide(type, create);
                     }
                 });
             }
 
-            // Хуки и рендеринг
             if (config.connect) {
                 config.connect(this);
             }
@@ -61,16 +56,14 @@ export const createComponent = (tagName: string, config: ComponentConfig) => {
         }
     };
 
-    // Регистрируем ленивые провайдеры
     if (config.providers) {
-        config.providers.forEach(({ type, create, lazy }) => {
+        config.providers.forEach(({ provider: type, create, lazy }) => {
             if (lazy) {
                 globalContext.provide(type, create);
             }
         });
     }
 
-    // Регистрируем компонент
     if (!customElements.get(tagName)) {
         customElements.define(tagName, Component);
     }
