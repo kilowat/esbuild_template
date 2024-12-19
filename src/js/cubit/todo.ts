@@ -14,6 +14,7 @@ export interface TodoItem {
 
 export class ToDoCubit extends Cubit<TodoState> {
     constructor() {
+        console.log('create')
         super({
             items: [],
             status: 'ready',
@@ -25,7 +26,7 @@ export class ToDoCubit extends Cubit<TodoState> {
         this.emit({ status: 'ready', items });
     }
 
-    async addItem() {
+    async addItem(value: string) {
         this.emit({ status: 'loading' });
         await awaiter(1, [])
         const newItem = { id: (this.state.items.length + 1).toString(), name: 'test' };

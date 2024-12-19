@@ -1,10 +1,8 @@
 
 import SvgIcon from "./svg-icon";
 
-import NativeTodos from "./native-todos";
-import sharedTodosCount from "./shared-todos-count";
+import * as App from "./app";
 export {
     SvgIcon,
-    NativeTodos,
-    sharedTodosCount
+    App
 }
