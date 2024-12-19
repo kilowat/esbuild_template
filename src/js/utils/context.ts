@@ -9,43 +9,41 @@ export const createProvider = <T>(): Provider<T> => ({
     factory: null as any
 });
 
-// Updated context creation
 const createContext = () => {
     const providers = new Map<symbol, () => any>();
     const globalInstances = new Map<symbol, any>();
     const localInstances = new WeakMap<HTMLElement, Map<symbol, any>>();
 
     const provide = <T>(provider: Provider<T>, factory: () => T): void => {
-        provider.factory = factory;
         providers.set(provider.token, factory);
+        // Создаем глобальный инстанс сразу
+        const instance = factory();
+        globalInstances.set(provider.token, instance);
     };
 
     const read = <T>(element: HTMLElement, provider: Provider<T>): T => {
         const token = provider.token;
 
-        // Check local instances
+        // Проверяем локальные инстансы
         const localMap = localInstances.get(element);
         if (localMap?.has(token)) {
             return localMap.get(token) as T;
         }
 
-        // Check global instances
+        // Проверяем глобальные инстансы
         if (globalInstances.has(token)) {
             return globalInstances.get(token) as T;
         }
 
-        // Find provider
+        // Находим провайдер и создаем инстанс
         const factory = providers.get(token);
         if (!factory) {
-            throw new Error(
-                `No provider found for the requested token. Ensure the provider is registered with provide().`
-            );
+            throw new Error(`No provider found for the requested token.`);
         }
 
-        // Create new instance
         const instance = factory();
 
-        // Save instance either globally or locally
+        // Сохраняем инстанс
         if (element.hasAttribute('local-provider')) {
             const localMap = localInstances.get(element) || new Map();
             localMap.set(token, instance);
@@ -54,7 +52,7 @@ const createContext = () => {
             globalInstances.set(token, instance);
         }
 
-        return instance as T;
+        return instance;
     };
 
     const dispose = (element: HTMLElement): void => {

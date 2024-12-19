@@ -1,5 +1,6 @@
 import { TypedHTMLElement } from "./component";
 
+// types.ts
 export type Provider<T> = {
     token: symbol;
     factory: () => T;
@@ -11,10 +12,9 @@ export type ProviderConfig<T> = {
     lazy?: boolean;
 };
 
-// Updated component configuration type
 export type ComponentConfig = {
     providers?: Array<ProviderConfig<any>>;
-    connect?: (element: TypedHTMLElement) => void;
+    connect?: (element: TypedHTMLElement) => void | (() => void);
     disconnect?: (element: TypedHTMLElement) => void;
-    render?: (element: TypedHTMLElement) => any;
+    render?: (element: TypedHTMLElement) => unknown | (() => void);
 };

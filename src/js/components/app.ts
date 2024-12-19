@@ -3,23 +3,33 @@ import { createComponent } from "../utils/component";
 import { ToDoCubit } from "../cubit/todo";
 import { Consumer } from "../utils/cubit";
 import { createProvider } from "../utils/context";
+
 const TodoCubitProvider = createProvider<ToDoCubit>();
 
-const AppRoot = createComponent('app-root', {
+createComponent('app-root', {
     providers: [
         {
             provider: TodoCubitProvider,
             create: () => new ToDoCubit(),
             lazy: false
         }
-    ]
+    ],
+    connect(element) {
+        const cubit = element.read(TodoCubitProvider)
+        return Consumer({
+            element,
+            cubit,
+            build(state) {
+                console.log('test22')
+            },
+            listener: () => {
+                console.log('root')
+            }
+        })
+    },
 });
 
-const TodoList = createComponent('todo-list', {
-    connect: (element) => {
-
-
-    },
+createComponent('todo-list', {
     render: (element) => {
         const cubit = element.read(TodoCubitProvider);
         cubit.fetchItems();
@@ -27,7 +37,7 @@ const TodoList = createComponent('todo-list', {
             cubit,
             element,
             listener: () => {
-                console.log('test')
+                console.log('todo-list')
             },
             build: ({ state }) => html`
             <div>
@@ -48,9 +58,8 @@ const TodoList = createComponent('todo-list', {
     }
 });
 
-const TodoForm = createComponent('todo-form', {
+createComponent('todo-form', {
     render: (element) => {
-        const cubit = element.read(TodoCubitProvider);
         const handleSubmit = (e: Event) => {
             const cubit = element.read(TodoCubitProvider);
             e.preventDefault();

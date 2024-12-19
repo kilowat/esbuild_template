@@ -1,44 +1,50 @@
+
+// component.ts
 import { render } from "lit-html/lit-html";
 import { globalContext } from "./context";
-import { ComponentConfig, Provider, ProviderConfig } from "./types";
+import { ComponentConfig, Provider } from "./types";
 
-// Updated base element class with typed read method
 export abstract class TypedHTMLElement extends HTMLElement {
+    private readonly _unsubscribers: Array<() => void> = [];
+
     read<T>(provider: Provider<T>): T {
         return globalContext.read(this, provider);
     }
 
-    setLocalProvider(): void {
-        this.setAttribute('local-provider', '');
+
+    protected addUnsubscriber(unsubscribe: () => void): void {
+        this._unsubscribers.push(unsubscribe);
+    }
+
+    protected clearUnsubscribers(): void {
+        this._unsubscribers.forEach(unsub => unsub());
+        this._unsubscribers.length = 0;
     }
 }
 
-// Updated component creation
 export const createComponent = (tagName: string, config: ComponentConfig) => {
     const Component = class extends TypedHTMLElement {
-        private unsubscribers: Array<() => void> = [];
-
         connectedCallback() {
-            if (config.providers?.some(provider => provider)) {
-                this.setLocalProvider();
-            }
-
+            // Сначала регистрируем провайдеры
             if (config.providers) {
-                config.providers.forEach(({ provider: type, create, lazy }) => {
-                    if (!lazy) {
-                        globalContext.provide(type, create);
-                    }
+                config.providers.forEach(({ provider, create, lazy }) => {
+                    globalContext.provide(provider, create);
                 });
             }
 
+            // Подключаем компонент
             if (config.connect) {
-                config.connect(this);
+                const unsubscribe = config.connect(this);
+                if (typeof unsubscribe === 'function') {
+                    this.addUnsubscriber(unsubscribe);
+                }
             }
 
+            // Рендерим
             if (config.render) {
                 const result = config.render(this);
                 if (typeof result === 'function') {
-                    this.unsubscribers.push(result as () => void);
+                    this.addUnsubscriber(result as () => void);
                 } else {
                     render(result, this);
                 }
@@ -46,8 +52,7 @@ export const createComponent = (tagName: string, config: ComponentConfig) => {
         }
 
         disconnectedCallback() {
-            this.unsubscribers.forEach(unsub => unsub());
-            this.unsubscribers = [];
+            this.clearUnsubscribers();
             globalContext.dispose(this);
 
             if (config.disconnect) {
@@ -56,10 +61,11 @@ export const createComponent = (tagName: string, config: ComponentConfig) => {
         }
     };
 
+    // Регистрируем ленивые провайдеры на уровне определения компонента
     if (config.providers) {
-        config.providers.forEach(({ provider: type, create, lazy }) => {
+        config.providers.forEach(({ provider, create, lazy }) => {
             if (lazy) {
-                globalContext.provide(type, create);
+                globalContext.provide(provider, create);
             }
         });
     }
