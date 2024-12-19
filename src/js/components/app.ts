@@ -1,21 +1,16 @@
 import { html } from "lit-html/lit-html";
-import { createComponent } from "../utils/component";
+import { createComponent } from "../bloc/component";
 import { ToDoCubit } from "../cubit/todo";
-import { Consumer } from "../utils/cubit";
-import { createProvider } from "../utils/context";
+import { Consumer, CreateCubitProvider } from "../bloc";
 
-const TodoCubitProvider = createProvider<ToDoCubit>();
+const todoCubitProvider = CreateCubitProvider(() => new ToDoCubit());
 
 createComponent('app-root', {
     providers: [
-        {
-            provider: TodoCubitProvider,
-            create: () => new ToDoCubit(),
-            lazy: false
-        }
+        todoCubitProvider,
     ],
     connect(element) {
-        const cubit = element.read(TodoCubitProvider)
+        const cubit = element.read(todoCubitProvider)
         return Consumer({
             element,
             cubit,
@@ -30,8 +25,11 @@ createComponent('app-root', {
 });
 
 createComponent('todo-list', {
+    providers: [
+
+    ],
     render: (element) => {
-        const cubit = element.read(TodoCubitProvider);
+        const cubit = element.read(todoCubitProvider);
         cubit.fetchItems();
         return Consumer({
             cubit,
@@ -61,7 +59,7 @@ createComponent('todo-list', {
 createComponent('todo-form', {
     render: (element) => {
         const handleSubmit = (e: Event) => {
-            const cubit = element.read(TodoCubitProvider);
+            const cubit = element.read(todoCubitProvider);
             e.preventDefault();
             const form = e.target as HTMLFormElement;
             const input = form.querySelector('input') as HTMLInputElement;

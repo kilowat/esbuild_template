@@ -1,4 +1,4 @@
-import { TypedHTMLElement } from "./component";
+import { BlocHTMLElement } from "./component";
 
 // types.ts
 export type Provider<T> = {
@@ -14,7 +14,7 @@ export type ProviderConfig<T> = {
 
 export type ComponentConfig = {
     providers?: Array<ProviderConfig<any>>;
-    connect?: (element: TypedHTMLElement) => void | (() => void);
-    disconnect?: (element: TypedHTMLElement) => void;
-    render?: (element: TypedHTMLElement) => unknown | (() => void);
+    connect?: (element: BlocHTMLElement) => void | (() => void);
+    disconnect?: (element: BlocHTMLElement) => void;
+    render?: (element: BlocHTMLElement) => unknown | (() => void);
 };

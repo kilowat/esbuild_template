@@ -2,15 +2,14 @@
 // component.ts
 import { render } from "lit-html/lit-html";
 import { globalContext } from "./context";
-import { ComponentConfig, Provider } from "./types";
+import { ComponentConfig, ProviderConfig } from "./types";
 
-export abstract class TypedHTMLElement extends HTMLElement {
+export abstract class BlocHTMLElement extends HTMLElement {
     private readonly _unsubscribers: Array<() => void> = [];
 
-    read<T>(provider: Provider<T>): T {
-        return globalContext.read(this, provider);
+    read<T>(providerConfig: ProviderConfig<T>): T {
+        return globalContext.read(this, providerConfig.provider);
     }
-
 
     protected addUnsubscriber(unsubscribe: () => void): void {
         this._unsubscribers.push(unsubscribe);
@@ -20,10 +19,11 @@ export abstract class TypedHTMLElement extends HTMLElement {
         this._unsubscribers.forEach(unsub => unsub());
         this._unsubscribers.length = 0;
     }
+
 }
 
 export const createComponent = (tagName: string, config: ComponentConfig) => {
-    const Component = class extends TypedHTMLElement {
+    const Component = class extends BlocHTMLElement {
         connectedCallback() {
             // Сначала регистрируем провайдеры
             if (config.providers) {

@@ -1,13 +1,20 @@
 // Define base types for type inference
 
-import { Provider } from "./types";
-
+import { Provider, ProviderConfig } from "./types";
 
 // Create helper for defining providers
-export const createProvider = <T>(): Provider<T> => ({
-    token: Symbol(),
-    factory: null as any
-});
+export const CreateCubitProvider = <T>(factory?: () => T, lazy: boolean = false): ProviderConfig<T> => {
+    const provider: Provider<T> = {
+        token: Symbol(),
+        factory: null as any
+    };
+
+    return {
+        provider,
+        create: factory || (() => null as any),
+        lazy
+    };
+};
 
 const createContext = () => {
     const providers = new Map<symbol, () => any>();
@@ -43,14 +50,7 @@ const createContext = () => {
 
         const instance = factory();
 
-        // Сохраняем инстанс
-        if (element.hasAttribute('local-provider')) {
-            const localMap = localInstances.get(element) || new Map();
-            localMap.set(token, instance);
-            localInstances.set(element, localMap);
-        } else {
-            globalInstances.set(token, instance);
-        }
+        globalInstances.set(token, instance);
 
         return instance;
     };
