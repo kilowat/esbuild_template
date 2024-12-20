@@ -179,7 +179,7 @@ export function QueryConsumer<T, E extends HTMLElement = HTMLElement>({
         }
     };
 
-    if (document.readyState === 'loading') {
+    if (window && document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initializeSubscription);
     } else {
         initializeSubscription();
@@ -192,6 +192,8 @@ export function QueryConsumer<T, E extends HTMLElement = HTMLElement>({
         if (element) {
             disconnected?.({ element });
         }
-        document.removeEventListener('DOMContentLoaded', initializeSubscription);
+        if (window) {
+            document.removeEventListener('DOMContentLoaded', initializeSubscription);
+        }
     };
 }
