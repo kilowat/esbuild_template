@@ -1,33 +1,24 @@
-export default class IconComponent extends HTMLElement {
-  constructor() {
-    super();
-  }
+import { html, nothing } from 'lit-html';
+import { ComponentConsumer } from '../bloc/consumers';
 
-  connectedCallback() {
-    const iconName = this.getAttribute('name');
-    if (iconName) {
-      this.loadIcon(iconName);
-    } else {
-      console.error('Icon name not provided.');
-      this.innerHTML = '<span>Icon not provided</span>';
+
+
+
+export default ComponentConsumer({
+    tagName: 'svg-icon',
+    observedAttributes: ['data-name', 'data-size', 'data-color'],
+    build: ({ element }) => {
+        const name = element.getAttribute('data-name') ?? '';
+        const size = element.getAttribute('data-size');
+        const color = element.getAttribute('data-color');
+        const height = `--icon-size: ${size}px;`
+        const width = `--icon-size:${size}px;`
+        const fill = `--icon-fill:${color};`;
+
+        return html`
+            <svg style="${height} ${width} ${fill}">
+             <use href="#${name}"></use>
+            </svg>
+        `;
     }
-  }
-
-  private async loadIcon(iconName: string) {
-    try {
-      const svgContent = await import(`../../icons/${iconName}.svg`);
-      this.render(svgContent.default);
-    } catch (err) {
-      console.error(`Icon "${iconName}" not found.`, err);
-      this.innerHTML = '<span>Icon not found</span>';
-    }
-  }
-
-  private render(svg: string) {
-    this.innerHTML = `
-      ${svg}
-    `;
-  }
-}
-
-customElements.define('svg-icon', IconComponent);
+});

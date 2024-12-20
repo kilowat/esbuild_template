@@ -1,7 +1,7 @@
 
-import SvgIcon from "./svg-icon";
-import * as App from "./app";
 
+import * as App from "./app";
+import * as SvgIcon from "./svg-icon";
 export {
     SvgIcon,
     App,

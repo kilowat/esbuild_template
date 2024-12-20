@@ -3,6 +3,8 @@ body {
 }
 
 svg {
+    display: inline-block;
+    vertical-align: middle;
     width: var(--icon-size, 24px);
     height: var(--icon-size, 24px);
     fill: var(--icon-fill, currentColor);

@@ -5,7 +5,7 @@ import { copy } from 'esbuild-plugin-copy';
 import { sassPlugin } from 'esbuild-sass-plugin';
 import esbuildPluginTsc from 'esbuild-plugin-tsc';
 import SvgPlugin from 'esbuild-plugin-svg';
-
+import { svgSpriteBuilder } from './plugins/svg-sprite-builder.js';
 
 
 const buildPath = 'dist';
@@ -52,6 +52,7 @@ const build = await esbuild.context({
     '.html': 'copy',
   },
   plugins: [
+    svgSpriteBuilder(),
     sassPlugin({
       watch: true,
       filter: /\.scss$/i,
