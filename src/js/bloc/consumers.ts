@@ -64,7 +64,7 @@ export function ComponentConsumer<T, E extends HTMLElement = HTMLElement>({
             connected?.({ element: this as unknown as E });
 
             if (cubit) {
-                this.unsubscribe = cubit._subscribe(
+                this.unsubscribe = cubit.subscribe(
                     listener
                         ? (state) => listener({ state, element: this as unknown as E })
                         : undefined,
@@ -143,7 +143,7 @@ export function QueryConsumer<T, E extends HTMLElement = HTMLElement>({
         connected?.({ element });
 
         if (cubit) {
-            unsubscribe = cubit._subscribe(
+            unsubscribe = cubit.subscribe(
                 listener
                     ? (state) => listener({ state, element: element! })
                     : undefined,

@@ -37,7 +37,7 @@ export function useCubit<T>(initialState: T) {
         });
     }
 
-    function _subscribe(
+    function subscribe(
         listener?: StateListener<T>,
         build?: (state: T) => unknown,
         element?: HTMLElement,
@@ -71,7 +71,7 @@ export function useCubit<T>(initialState: T) {
             return _prevState;
         },
         emit,
-        _subscribe,
+        subscribe,
     };
 }
 
@@ -105,7 +105,7 @@ export function Consumer<T>({
         nextState: Readonly<T>;
     }) => boolean;
 }): () => void {
-    return cubit._subscribe(
+    return cubit.subscribe(
         listener
             ? (state) => listener({ state })
             : undefined,
