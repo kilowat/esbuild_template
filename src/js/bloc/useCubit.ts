@@ -1,4 +1,4 @@
-import { render } from "lit-html";
+import { render } from "lit-html/lit-html";
 
 export type StateListener<T> = (state: T) => void;
 export type BuildWhen<T> = (prevState: T, nextState: T) => boolean;
@@ -10,7 +10,6 @@ export function useCubit<T>(initialState: T) {
     const _listeners = new Set<{
         listener?: StateListener<T>;
         build?: (state: T) => unknown;
-        element?: HTMLElement;
         buildWhen?: BuildWhen<T>;
         listenWhen?: ListenWhen<T>;
     }>();
@@ -24,12 +23,12 @@ export function useCubit<T>(initialState: T) {
             _state = newState as T;
         }
 
-        _listeners.forEach(({ listener, build, element, buildWhen, listenWhen }) => {
-            const shouldBuild = build && element && (!buildWhen || buildWhen(_prevState, _state));
+        _listeners.forEach(({ listener, build, buildWhen, listenWhen }) => {
+            const shouldBuild = build && (!buildWhen || buildWhen(_prevState, _state));
             const shouldListen = listener && (!listenWhen || listenWhen(_prevState, _state));
 
             if (shouldBuild) {
-                render(build(_state), element);
+                build(_state);
             }
 
             if (shouldListen) {
@@ -52,7 +51,7 @@ export function useCubit<T>(initialState: T) {
         const shouldListen = listener && (!listenWhen || listenWhen(_prevState, _state));
 
         if (shouldBuild) {
-            render(build(_state), element);
+            build(_state);
         }
 
         if (shouldListen) {
@@ -77,6 +76,7 @@ export function useCubit<T>(initialState: T) {
 }
 
 export type CubitType<T> = ReturnType<typeof useCubit<T>>;
+
 
 export function Consumer<T>({
     cubit,
@@ -110,7 +110,11 @@ export function Consumer<T>({
             ? (state) => listener({ state })
             : undefined,
         build
-            ? (state) => build({ state })
+            ? (state) => {
+                if (element) {
+                    render(build({ state }), element)
+                }
+            }
             : undefined,
         element,
         buildWhen
