@@ -128,55 +128,67 @@ export function QueryConsumer<T, E extends HTMLElement = HTMLElement>({
     connected,
     disconnected,
 }: BaseConsumerProps<T, E> & {
-    query: () => E | null;
+    query: () => E | E[] | NodeListOf<E> | null;
 }): () => void {
-    let unsubscribe: (() => void) | undefined;
-    let element: E | null = null;
+    let unsubscribes: (() => void)[] = [];
+    let elements: E[] = [];
 
     const initializeSubscription = () => {
-        element = query();
-        if (!element) {
-            console.warn('Element not found for QueryConsumer');
+        const queryResult = query();
+        if (!queryResult) {
+            console.warn('No elements found for QueryConsumer');
             return;
         }
 
-        connected?.({ element });
+        // Convert query result to array of elements
+        elements = Array.isArray(queryResult) || queryResult instanceof NodeList
+            ? Array.from(queryResult)
+            : [queryResult];
 
-        if (cubit) {
-            unsubscribe = cubit.subscribe(
-                listener
-                    ? (state) => listener({ state, element: element! })
-                    : undefined,
-                build
-                    ? (state) => {
-                        if (element) {
+        if (elements.length === 0) {
+            console.warn('No elements found for QueryConsumer');
+            return;
+        }
+
+        // Initialize each element
+        elements.forEach(element => {
+            connected?.({ element });
+
+            if (cubit) {
+                const unsubscribe = cubit.subscribe(
+                    listener
+                        ? (state) => listener({ state, element })
+                        : undefined,
+                    build
+                        ? (state) => {
                             const result = build({ state, element });
                             render(result, element);
                         }
-                    }
-                    : undefined,
-                element,
-                buildWhen
-                    ? (prevState, nextState) => buildWhen({
-                        prevState,
-                        nextState,
-                        element: element!
-                    })
-                    : undefined,
-                listenWhen
-                    ? (prevState, nextState) => listenWhen({
-                        prevState,
-                        nextState,
-                        element: element!
-                    })
-                    : undefined
-            );
-        } else if (build) {
-            // If no cubit but build function exists, render initial content
-            const initialState = {} as T;
-            const result = build({ state: initialState, element });
-            render(result, element);
-        }
+                        : undefined,
+                    element,
+                    buildWhen
+                        ? (prevState, nextState) => buildWhen({
+                            prevState,
+                            nextState,
+                            element
+                        })
+                        : undefined,
+                    listenWhen
+                        ? (prevState, nextState) => listenWhen({
+                            prevState,
+                            nextState,
+                            element
+                        })
+                        : undefined
+                );
+                unsubscribes.push(unsubscribe);
+            } else if (build) {
+                // If no cubit but build function exists, render initial content
+                const initialState = {} as T;
+                const result = build({ state: initialState, element });
+                render(result, element);
+            }
+        });
     };
 
     if (window && document.readyState === 'loading') {
@@ -186,14 +198,20 @@ export function QueryConsumer<T, E extends HTMLElement = HTMLElement>({
     }
 
     return () => {
-        if (unsubscribe) {
-            unsubscribe();
-        }
-        if (element) {
+        // Cleanup all subscriptions
+        unsubscribes.forEach(unsubscribe => unsubscribe());
+
+        // Call disconnected callback for each element
+        elements.forEach(element => {
             disconnected?.({ element });
-        }
+        });
+
         if (window) {
             document.removeEventListener('DOMContentLoaded', initializeSubscription);
         }
+
+        // Reset arrays
+        unsubscribes = [];
+        elements = [];
     };
 }
