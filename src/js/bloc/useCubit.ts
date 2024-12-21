@@ -1,39 +1,40 @@
 import { render } from "lit-html/lit-html";
 
+// Core types
 export type StateListener<T> = (state: T) => void;
-export type BuildWhen<T> = (prevState: T, nextState: T) => boolean;
-export type ListenWhen<T> = (prevState: T, nextState: T) => boolean;
+export type StateComparer<T> = (prev: T, next: T) => boolean;
+
+// Simple interfaces for internal use
+interface ListenerEntry<T> {
+    listener?: StateListener<T>;
+    build?: (state: T) => unknown;
+    buildWhen?: StateComparer<T>;
+    listenWhen?: StateComparer<T>;
+    element?: HTMLElement;
+}
 
 export function useCubit<T>(initialState: T) {
-    let _state = initialState;
-    let _prevState = initialState;
-    const _listeners = new Set<{
-        listener?: StateListener<T>;
-        build?: (state: T) => unknown;
-        buildWhen?: BuildWhen<T>;
-        listenWhen?: ListenWhen<T>;
-    }>();
+    let state = initialState;
+    let prevState = initialState;
+    const listeners = new Set<ListenerEntry<T>>();
 
     function emit(newState: Partial<T> | T): void {
-        _prevState = _state;
+        prevState = state;
 
-        if (typeof _state === "object" && _state !== null && typeof newState === "object") {
-            _state = { ..._state, ...newState } as T;
+        if (typeof state === "object" && state !== null && typeof newState === "object") {
+            state = { ...state, ...newState } as T;
         } else {
-            _state = newState as T;
+            state = newState as T;
         }
 
-        _listeners.forEach(({ listener, build, buildWhen, listenWhen }) => {
-            const shouldBuild = build && (!buildWhen || buildWhen(_prevState, _state));
-            const shouldListen = listener && (!listenWhen || listenWhen(_prevState, _state));
+        listeners.forEach(entry => {
+            const { listener, build, buildWhen, listenWhen } = entry;
 
-            if (shouldBuild) {
-                build(_state);
-            }
+            const shouldBuild = build && (!buildWhen || buildWhen(prevState, state));
+            const shouldListen = listener && (!listenWhen || listenWhen(prevState, state));
 
-            if (shouldListen) {
-                listener(_state);
-            }
+            if (shouldBuild) build(state);
+            if (shouldListen) listener(state);
         });
     }
 
@@ -41,35 +42,25 @@ export function useCubit<T>(initialState: T) {
         listener?: StateListener<T>,
         build?: (state: T) => unknown,
         element?: HTMLElement,
-        buildWhen?: BuildWhen<T>,
-        listenWhen?: ListenWhen<T>
+        buildWhen?: StateComparer<T>,
+        listenWhen?: StateComparer<T>
     ): () => void {
         const entry = { listener, build, element, buildWhen, listenWhen };
-        _listeners.add(entry);
+        listeners.add(entry);
 
-        const shouldBuild = build && element && (!buildWhen || buildWhen(_prevState, _state));
-        const shouldListen = listener && (!listenWhen || listenWhen(_prevState, _state));
+        // Initial notification
+        const shouldBuild = build && (!buildWhen || buildWhen(prevState, state));
+        const shouldListen = listener && (!listenWhen || listenWhen(prevState, state));
 
-        if (shouldBuild) {
-            build(_state);
-        }
+        if (shouldBuild) build(state);
+        if (shouldListen) listener(state);
 
-        if (shouldListen) {
-            listener(_state);
-        }
-
-        return () => {
-            _listeners.delete(entry);
-        };
+        return () => listeners.delete(entry);
     }
 
     return {
-        get state() {
-            return _state;
-        },
-        get prevState() {
-            return _prevState;
-        },
+        get state() { return state; },
+        get prevState() { return prevState; },
         emit,
         subscribe,
     };
@@ -77,6 +68,15 @@ export function useCubit<T>(initialState: T) {
 
 export type CubitType<T> = ReturnType<typeof useCubit<T>>;
 
+// Props interface for Consumer
+export interface ConsumerProps<T> {
+    cubit: CubitType<T>;
+    element?: HTMLElement;
+    build?: (props: { state: T }) => unknown;
+    buildWhen?: (props: { prevState: T; nextState: T }) => boolean;
+    listener?: (props: { state: T }) => void;
+    listenWhen?: (props: { prevState: T; nextState: T }) => boolean;
+}
 
 export function Consumer<T>({
     cubit,
@@ -85,43 +85,12 @@ export function Consumer<T>({
     buildWhen,
     listener,
     listenWhen,
-}: {
-    cubit: CubitType<T>;
-    element?: HTMLElement;
-    build?: ({ state }: { state: Readonly<T>; }) => unknown;
-    buildWhen?: ({
-        prevState,
-        nextState,
-    }: {
-        prevState: Readonly<T>;
-        nextState: Readonly<T>;
-    }) => boolean;
-    listener?: ({ state }: { state: Readonly<T>; }) => void;
-    listenWhen?: ({
-        prevState,
-        nextState,
-    }: {
-        prevState: Readonly<T>;
-        nextState: Readonly<T>;
-    }) => boolean;
-}): () => void {
+}: ConsumerProps<T>): () => void {
     return cubit.subscribe(
-        listener
-            ? (state) => listener({ state })
-            : undefined,
-        build
-            ? (state) => {
-                if (element) {
-                    render(build({ state }), element)
-                }
-            }
-            : undefined,
+        listener ? (state) => listener({ state }) : undefined,
+        build ? (state) => element && render(build({ state }), element) : undefined,
         element,
-        buildWhen
-            ? (prevState, nextState) => buildWhen({ prevState, nextState })
-            : undefined,
-        listenWhen
-            ? (prevState, nextState) => listenWhen({ prevState, nextState })
-            : undefined
+        buildWhen ? (prev, next) => buildWhen({ prevState: prev, nextState: next }) : undefined,
+        listenWhen ? (prev, next) => listenWhen({ prevState: prev, nextState: next }) : undefined
     );
 }
