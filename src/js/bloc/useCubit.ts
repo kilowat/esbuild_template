@@ -12,22 +12,28 @@ interface ListenerEntry<T> {
     listenWhen?: StateComparer<T>;
     element?: HTMLElement;
 }
-
 export function useCubit<T>(initialState: T) {
     let state = initialState;
     let prevState = initialState;
     const listeners = new Set<ListenerEntry<T>>();
+    let batchedUpdates: Partial<T> | null = null;
+    let updateScheduled = false;
 
-    function emit(newState: Partial<T> | T): void {
+    function applyUpdates() {
+        if (batchedUpdates === null) return;
+
         prevState = state;
 
-        if (typeof state === "object" && state !== null && typeof newState === "object") {
-            state = { ...state, ...newState } as T;
+        // Для объектов объединяем обновления, для других типов заменяем полностью
+        if (typeof state === "object" && state !== null && typeof batchedUpdates === "object") {
+            state = { ...state, ...batchedUpdates } as T;
         } else {
-            state = newState as T;
+            state = batchedUpdates as T;
         }
 
-        listeners.forEach(entry => {
+        batchedUpdates = null;
+
+        listeners.forEach((entry) => {
             const { listener, build, buildWhen, listenWhen } = entry;
 
             const shouldBuild = build && (!buildWhen || buildWhen(prevState, state));
@@ -36,6 +42,22 @@ export function useCubit<T>(initialState: T) {
             if (shouldBuild) build(state);
             if (shouldListen) listener(state);
         });
+
+        updateScheduled = false;
+    }
+
+    function emit(update: Partial<T> | T): void {
+        // Проверяем тип состояния и обновления
+        if (typeof state === "object" && state !== null && typeof update === "object") {
+            batchedUpdates = batchedUpdates ? { ...batchedUpdates, ...update } : update;
+        } else {
+            batchedUpdates = update as T;
+        }
+
+        if (!updateScheduled) {
+            updateScheduled = true;
+            Promise.resolve().then(applyUpdates);
+        }
     }
 
     function subscribe(
@@ -65,6 +87,7 @@ export function useCubit<T>(initialState: T) {
         subscribe,
     };
 }
+
 
 export type CubitType<T> = ReturnType<typeof useCubit<T>>;
 
