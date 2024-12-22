@@ -1,4 +1,5 @@
-import { render } from "lit-html/lit-html";
+
+import { getRenderer } from "./config";
 import { CubitType } from "./useCubit";
 
 // Base types
@@ -6,6 +7,7 @@ export interface ElementCallback<T, E extends HTMLElement> {
     state: Readonly<T>;
     element: E;
 }
+
 
 export interface StateChangeCallback<T, E extends HTMLElement> {
     prevState: Readonly<T>;
@@ -25,17 +27,33 @@ export interface AttributeChangeCallback<E extends HTMLElement> {
 }
 
 // Common props interface
-export interface BaseConsumerProps<T, E extends HTMLElement> {
-    cubit?: CubitType<T>;
-    build?: (params: ElementCallback<T, E>) => unknown;
-    buildWhen?: (params: StateChangeCallback<T, E>) => boolean;
-    listener?: (params: ElementCallback<T, E>) => void;
-    listenWhen?: (params: StateChangeCallback<T, E>) => boolean;
-    connected?: (params: ElementOnlyCallback<E>) => void;
-    disconnected?: (params: ElementOnlyCallback<E>) => void;
+// types.ts
+export interface RenderEngine<T = unknown> {
+    render: (result: T, container: HTMLElement) => void;
+    cleanup?: (container: HTMLElement) => void;
 }
 
-// Helper functions
+export interface ConsumerConfig {
+    renderer: RenderEngine;
+}
+
+let globalConfig: ConsumerConfig = {
+    renderer: {
+        render: (result: unknown, container: HTMLElement) => {
+            if (typeof result === 'string') {
+                container.innerHTML = result;
+            } else if (result instanceof Node) {
+                container.innerHTML = '';
+                container.appendChild(result);
+            }
+        }
+    }
+};
+
+export function configureConsumers(config: Partial<ConsumerConfig>) {
+    globalConfig = { ...globalConfig, ...config };
+}
+
 function createCubitSubscription<T, E extends HTMLElement>({
     cubit,
     element,
@@ -43,14 +61,18 @@ function createCubitSubscription<T, E extends HTMLElement>({
     buildWhen,
     listener,
     listenWhen,
-}: BaseConsumerProps<T, E> & { element: E }) {
+}: BaseConsumerProps<T, E> & {
+    element: E;
+}) {
     if (!cubit) return;
+
+    const renderer = getRenderer();
 
     return cubit.subscribe(
         listener ? (state) => listener({ state, element }) : undefined,
         build ? (state) => {
             const result = build({ state, element });
-            render(result, element);
+            renderer.render(result, element);
         } : undefined,
         element,
         buildWhen ? (prevState, nextState) =>
@@ -62,16 +84,29 @@ function createCubitSubscription<T, E extends HTMLElement>({
 
 function renderInitialBuild<T, E extends HTMLElement>(
     build: ((params: ElementCallback<T, E>) => unknown) | undefined,
-    element: E
+    element: E,
+    renderer: RenderEngine = globalConfig.renderer
 ) {
     if (!build) return;
 
     const initialState = {} as T;
     const result = build({ state: initialState, element });
-    render(result, element);
+    renderer.render(result, element);
 }
 
-// Component Consumer
+// Updated interfaces
+export interface BaseConsumerProps<T, E extends HTMLElement> {
+    cubit?: CubitType<T>;
+    build?: (params: ElementCallback<T, E>) => unknown;
+    buildWhen?: (params: StateChangeCallback<T, E>) => boolean;
+    listener?: (params: ElementCallback<T, E>) => void;
+    listenWhen?: (params: StateChangeCallback<T, E>) => boolean;
+    connected?: (params: ElementOnlyCallback<E>) => void;
+    disconnected?: (params: ElementOnlyCallback<E>) => void;
+    renderer?: RenderEngine;
+}
+
+// Component Consumer with renderer support
 export function ComponentConsumer<T, E extends HTMLElement = HTMLElement>({
     cubit,
     tagName,
@@ -82,7 +117,8 @@ export function ComponentConsumer<T, E extends HTMLElement = HTMLElement>({
     connected,
     disconnected,
     attributeChanged,
-    observedAttributes = []
+    observedAttributes = [],
+    renderer = globalConfig.renderer
 }: BaseConsumerProps<T, E> & {
     tagName: string;
     attributeChanged?: (params: AttributeChangeCallback<E>) => void;
@@ -103,14 +139,15 @@ export function ComponentConsumer<T, E extends HTMLElement = HTMLElement>({
 
             if (cubit) {
                 this.unsubscribe = createCubitSubscription({
-                    cubit, element, build, buildWhen, listener, listenWhen
+                    cubit, element, build, buildWhen, listener, listenWhen, renderer
                 });
             } else {
-                renderInitialBuild(build, element);
+                renderInitialBuild(build, element, renderer);
             }
         }
 
         disconnectedCallback() {
+            renderer.cleanup?.(this as unknown as E);
             this.unsubscribe?.();
             disconnected?.({ element: this as unknown as E });
         }
@@ -128,7 +165,7 @@ export function ComponentConsumer<T, E extends HTMLElement = HTMLElement>({
     customElements.define(tagName, CustomElement);
 }
 
-// Query Consumer
+// Query Consumer with renderer support
 export function QueryConsumer<T, E extends HTMLElement = HTMLElement>({
     cubit,
     query,
@@ -138,6 +175,7 @@ export function QueryConsumer<T, E extends HTMLElement = HTMLElement>({
     listenWhen,
     connected,
     disconnected,
+    renderer = globalConfig.renderer
 }: BaseConsumerProps<T, E> & {
     query: () => E | E[] | NodeListOf<E> | null;
 }): () => void {
@@ -159,11 +197,11 @@ export function QueryConsumer<T, E extends HTMLElement = HTMLElement>({
 
             if (cubit) {
                 const unsubscribe = createCubitSubscription({
-                    cubit, element, build, buildWhen, listener, listenWhen
+                    cubit, element, build, buildWhen, listener, listenWhen, renderer
                 });
                 if (unsubscribe) unsubscribes.push(unsubscribe);
             } else {
-                renderInitialBuild(build, element);
+                renderInitialBuild(build, element, renderer);
             }
         });
     }
@@ -178,17 +216,18 @@ export function QueryConsumer<T, E extends HTMLElement = HTMLElement>({
         handleElements(queryResult);
     }
 
-    // Initialize based on document ready state
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initializeSubscription);
     } else {
         initializeSubscription();
     }
 
-    // Cleanup function
     return () => {
+        elements.forEach(element => {
+            renderer.cleanup?.(element);
+            disconnected?.({ element });
+        });
         unsubscribes.forEach(unsubscribe => unsubscribe());
-        elements.forEach(element => disconnected?.({ element }));
         document.removeEventListener('DOMContentLoaded', initializeSubscription);
 
         unsubscribes.length = 0;
