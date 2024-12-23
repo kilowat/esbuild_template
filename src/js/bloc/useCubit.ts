@@ -16,6 +16,16 @@ export function useCubit<T>(initialState: T) {
     let batchedUpdates: Partial<T> | null = null;
     let updateScheduled = false;
 
+    function notifyListener(entry: ListenerEntry<T>, prev: T, current: T) {
+        const { listener, build, buildWhen, listenWhen } = entry;
+
+        const shouldBuild = build && (!buildWhen || buildWhen(prev, current));
+        const shouldListen = listener && (!listenWhen || listenWhen(prev, current));
+
+        if (shouldBuild) build(current);
+        if (shouldListen) listener(current);
+    }
+
     function applyUpdates() {
         if (batchedUpdates === null) return;
 
@@ -29,15 +39,7 @@ export function useCubit<T>(initialState: T) {
 
         batchedUpdates = null;
 
-        listeners.forEach((entry) => {
-            const { listener, build, buildWhen, listenWhen } = entry;
-
-            const shouldBuild = build && (!buildWhen || buildWhen(prevState, state));
-            const shouldListen = listener && (!listenWhen || listenWhen(prevState, state));
-
-            if (shouldBuild) build(state);
-            if (shouldListen) listener(state);
-        });
+        listeners.forEach(entry => notifyListener(entry, prevState, state));
 
         updateScheduled = false;
     }
@@ -65,11 +67,8 @@ export function useCubit<T>(initialState: T) {
         const entry = { listener, build, element, buildWhen, listenWhen };
         listeners.add(entry);
 
-        const shouldBuild = build && (!buildWhen || buildWhen(prevState, state));
-        const shouldListen = listener && (!listenWhen || listenWhen(prevState, state));
-
-        if (shouldBuild) build(state);
-        if (shouldListen) listener(state);
+        // Уведомляем о текущем состоянии при подписке
+        notifyListener(entry, prevState, state);
 
         return () => listeners.delete(entry);
     }
