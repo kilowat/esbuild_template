@@ -30,20 +30,21 @@ export const initToDo = async () => {
 
 export const addTodo = async () => {
     cubit.emit({ status: 'loading' });
-    await awaiter(1);
+    await awaiter(0);
     const newItem = {
-        id: cubit.state.items.length + 1,
+        id: `${cubit.state.items.length + 1}`,
         name: `todo ${cubit.state.items.length + 1}`
     }
-    cubit.emit({ status: 'ready', items: [] });
+    cubit.emit({ status: 'ready', items: [...cubit.state.items, newItem] });
 }
 
 export const editTodo = () => {
 
 }
 
-export const removeTodo = () => {
-
+export const removeTodo = (id: string) => {
+    const newItems = cubit.state.items.filter((items) => items.id != id);
+    cubit.emit({ items: newItems });
 }
 
 ComponentConsumer({
@@ -54,10 +55,13 @@ ComponentConsumer({
         initToDo();
     },
     build({ state }) {
+
         return html`
             <div class="todo">
+                <button @click="${() => addTodo()}">add to do</button>
                 <div class="todo-list">
                     ${state.items.map(buildItem)}
+                    
                  </div>
             </div>`
     },
@@ -68,5 +72,7 @@ function buildItem(item: TodoItem) {
         <div class="todo-item">
         <div class="todo-prop">id: 1</div>
         <div class="todo-prop">name: name-1</div>
+        <button @click="${() => removeTodo(item.id)}" >remove</button>
+        -----------------------------
     </div>`
 }
