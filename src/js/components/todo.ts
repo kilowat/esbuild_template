@@ -1,77 +1,54 @@
-import { html, } from "lit-html";
-import { ComponentConsumer } from "../bloc/consumers";
-import { useCubit } from "../bloc/useCubit";
+import { cmp, html, htmlFor, signal } from "../uhtml";
 import { awaiter } from "../utils/awaiter";
 
-interface TodoItem {
+interface ToDo {
     id: string,
-    name: string
+    name: string,
 }
 
 interface TodoState {
-    status: 'init' | 'ready' | 'loading' | 'success' | 'error'
-    items: TodoItem[]
+    status: 'init' | 'loading' | 'ready' | 'error',
+    items: ToDo[]
 }
 
-export const cubit = useCubit<TodoState>({
-    status: 'init',
-    items: [],
+export const todoSignal = signal<TodoState>({
+    status: 'init', items: []
 })
 
-export const initToDo = async () => {
-    cubit.emit({ status: 'loading' });
+export const todoInit = async () => {
+    todoSignal.emit({ status: 'loading' })
     await awaiter(1);
-    const items: TodoItem[] = [];
-    for (let i = 0; i < 10; i++) {
-        items.push({ id: `${i}`, name: 'todo-${i}' });
-    }
-    cubit.emit({ status: 'ready', items });
+    todoSignal.emit({ status: 'ready' })
 }
 
-export const addTodo = async () => {
-    cubit.emit({ status: 'loading' });
-    await awaiter(0);
-    const newItem = {
-        id: `${cubit.state.items.length + 1}`,
-        name: `todo ${cubit.state.items.length + 1}`
-    }
-    cubit.emit({ status: 'ready', items: [...cubit.state.items, newItem] });
-}
+export const todoAdd = () => { }
 
-export const editTodo = () => {
+export const todoRemove = () => { }
 
-}
+export const todoUpdate = () => { }
 
-export const removeTodo = (id: string) => {
-    const newItems = cubit.state.items.filter((items) => items.id != id);
-    cubit.emit({ items: newItems });
-}
-
-ComponentConsumer({
-    cubit,
-    tagName: 'todo-list',
+export default cmp({
+    signal: todoSignal,
     connected(params) {
-        console.log('todo-connected')
-        initToDo();
+        todoInit()
     },
-    build({ state }) {
+    tagName: 'todo-list',
+    listen(params) {
+
+    },
+    render: () => {
         return html`
-            <div class="todo">
-                <button @click="${() => addTodo()}">add to do</button>
-                <div class="todo-list">
-                    ${state.items.map(buildItem)}
-                    
-                 </div>
-            </div>`
-    },
+        <div class="todos">
+            <div>${todoSignal.value.status}</div>
+            <div class="todo-list">
+                ${todoSignal.value.items.map(TodoItem)}
+            </div>
+        <div>
+    `
+    }
 })
 
-function buildItem(item: TodoItem) {
-    return html`
-        <div class="todo-item">
-        <div class="todo-prop">id: 1</div>
-        <div class="todo-prop">name: name-1</div>
-        <button @click="${() => removeTodo(item.id)}" >remove</button>
-        -----------------------------
-    </div>`
+const TodoItem = (item: ToDo) => {
+    const html = htmlFor(TodoItem, item.id);
+    return html`<div>${item.id}<div>`
 }

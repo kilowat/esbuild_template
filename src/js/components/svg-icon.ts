@@ -1,9 +1,7 @@
-import { html, nothing } from 'lit-html';
-import { ComponentConsumer } from '../bloc/consumers';
 
 
 
-
+/*
 export default ComponentConsumer({
     tagName: 'svg-icon',
     observedAttributes: ['data-name', 'data-size', 'data-color'],
@@ -22,3 +20,4 @@ export default ComponentConsumer({
         `;
     }
 });
+*/
