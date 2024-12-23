@@ -1,7 +1,8 @@
-export type StateListener<T> = (state: T) => void;
-export type StateComparer<T> = (prev: T, next: T) => boolean;
+type StateListener<T> = (state: T) => void;
+type StateComparer<T> = (prev: T, next: T) => boolean;
 
 interface ListenerEntry<T> {
+    id: number;
     listener?: StateListener<T>;
     build?: (state: T) => unknown;
     buildWhen?: StateComparer<T>;
@@ -12,48 +13,88 @@ interface ListenerEntry<T> {
 export function useCubit<T>(initialState: T) {
     let state = initialState;
     let prevState = initialState;
-    const listeners = new Set<ListenerEntry<T>>();
-    let batchedUpdates: Partial<T> | null = null;
-    let updateScheduled = false;
+    let nextListenerId = 0;
 
-    function notifyListener(entry: ListenerEntry<T>, prev: T, current: T) {
-        const { listener, build, buildWhen, listenWhen } = entry;
+    // Используем Map вместо Set для более быстрого доступа и удаления
+    const listeners = new Map<number, ListenerEntry<T>>();
 
-        const shouldBuild = build && (!buildWhen || buildWhen(prev, current));
-        const shouldListen = listener && (!listenWhen || listenWhen(prev, current));
+    // Очередь обновлений для батчинга
+    let pendingUpdates: Array<Partial<T>> = [];
+    let isUpdateScheduled = false;
 
-        if (shouldBuild) build(current);
-        if (shouldListen) listener(current);
-    }
+    // Кэш для промиса микротаски
+    let updatePromise: Promise<void> | null = null;
 
+    // Оптимизированное сравнение объектов
+    const hasChanged = (a: T, b: T): boolean => {
+        if (a === b) return false;
+        if (typeof a !== 'object' || typeof b !== 'object') return true;
+        if (!a || !b) return true;
+
+        const keysA = Object.keys(a);
+        const keysB = Object.keys(b);
+
+        if (keysA.length !== keysB.length) return true;
+
+        for (const key of keysA) {
+            if (!(key in b) || a[key as keyof T] !== b[key as keyof T]) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    // Оптимизированное применение обновлений
     function applyUpdates() {
-        if (batchedUpdates === null) return;
+        if (pendingUpdates.length === 0) return;
 
         prevState = state;
 
-        if (typeof state === "object" && state !== null && typeof batchedUpdates === "object") {
-            state = { ...state, ...batchedUpdates } as T;
+        // Объединяем все обновления в одно
+        const finalUpdate = pendingUpdates.reduce((acc, update) => {
+            if (typeof state === 'object' && state !== null && typeof update === 'object') {
+                return { ...acc, ...update };
+            }
+            return update;
+        }, {} as Partial<T>);
+
+        // Применяем обновление
+        if (typeof state === 'object' && state !== null && typeof finalUpdate === 'object') {
+            state = { ...state, ...finalUpdate } as T;
         } else {
-            state = batchedUpdates as T;
+            state = finalUpdate as T;
         }
 
-        batchedUpdates = null;
+        // Очищаем очередь
+        pendingUpdates = [];
+        isUpdateScheduled = false;
+        updatePromise = null;
 
-        listeners.forEach(entry => notifyListener(entry, prevState, state));
+        // Уведомляем слушателей
+        const entries = Array.from(listeners.values());
+        for (const entry of entries) {
+            const { listener, build, buildWhen, listenWhen } = entry;
 
-        updateScheduled = false;
+            const shouldBuild = build && (!buildWhen || buildWhen(prevState, state));
+            const shouldListen = listener && (!listenWhen || listenWhen(prevState, state));
+
+            if (shouldBuild) build(state);
+            if (shouldListen) listener(state);
+        }
     }
 
     function emit(update: Partial<T> | T): void {
-        if (typeof state === "object" && state !== null && typeof update === "object") {
-            batchedUpdates = batchedUpdates ? { ...batchedUpdates, ...update } : update;
-        } else {
-            batchedUpdates = update as T;
+        // Проверяем, есть ли реальные изменения
+        if (typeof update === 'object' && !hasChanged(state, { ...state, ...update })) {
+            return;
         }
 
-        if (!updateScheduled) {
-            updateScheduled = true;
-            Promise.resolve().then(applyUpdates);
+        pendingUpdates.push(update);
+
+        if (!isUpdateScheduled) {
+            isUpdateScheduled = true;
+            updatePromise = updatePromise || Promise.resolve().then(applyUpdates);
         }
     }
 
@@ -64,13 +105,21 @@ export function useCubit<T>(initialState: T) {
         buildWhen?: StateComparer<T>,
         listenWhen?: StateComparer<T>
     ): () => void {
-        const entry = { listener, build, element, buildWhen, listenWhen };
-        listeners.add(entry);
+        const id = nextListenerId++;
+        const entry = { id, listener, build, element, buildWhen, listenWhen };
+        listeners.set(id, entry);
 
         // Уведомляем о текущем состоянии при подписке
-        notifyListener(entry, prevState, state);
+        if (listener && (!listenWhen || listenWhen(prevState, state))) {
+            listener(state);
+        }
+        if (build && (!buildWhen || buildWhen(prevState, state))) {
+            build(state);
+        }
 
-        return () => listeners.delete(entry);
+        return () => {
+            listeners.delete(id);
+        };
     }
 
     return {

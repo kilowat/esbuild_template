@@ -21,10 +21,10 @@ export const cubit = useCubit<TodoState>({
 export const initToDo = async () => {
     cubit.emit({ status: 'loading' });
     await awaiter(1);
-    const items = [
-        { id: '1', name: 'todo-1' },
-        { id: '2', name: 'todo-2' },
-    ];
+    const items: TodoItem[] = [];
+    for (let i = 0; i < 10; i++) {
+        items.push({ id: `${i}`, name: 'todo-${i}' });
+    }
     cubit.emit({ status: 'ready', items });
 }
 
@@ -55,7 +55,6 @@ ComponentConsumer({
         initToDo();
     },
     build({ state }) {
-
         return html`
             <div class="todo">
                 <button @click="${() => addTodo()}">add to do</button>
