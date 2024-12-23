@@ -12,36 +12,48 @@ interface TodoState {
 }
 
 export const todoSignal = signal<TodoState>({
-    status: 'init', items: []
+    status: 'init',
+    items: []
 })
 
 export const todoInit = async () => {
-    todoSignal.emit({ status: 'loading' })
+    todoSignal.emit({ status: 'loading' });
     await awaiter(1);
-    todoSignal.emit({ status: 'ready' })
+    const { items } = todoSignal.value;
+    const newItem = { id: `${items.length + 1}`, name: `item${items.length + 1}` };
+    const newItems = [...items, newItem];
+    todoSignal.emit({ status: 'ready', items: newItems, });
 }
 
-export const todoAdd = () => { }
+export const todoAdd = async () => {
+    todoSignal.emit({ status: 'loading' });
+    await awaiter(1);
+    const { items } = todoSignal.value;
+    const newItem = { id: `${items.length + 1}`, name: `item${items.length + 1}` };
+    const newItems = [...items, newItem];
+    todoSignal.emit({ status: 'ready', items: newItems, });
+}
 
 export const todoRemove = () => { }
 
 export const todoUpdate = () => { }
 
 export default cmp({
+    tagName: 'todo-list',
     signal: todoSignal,
-    connected(params) {
+    connected() {
         todoInit()
     },
-    tagName: 'todo-list',
     listen(params) {
-
+        console.log('was changhed:', params)
     },
-    render: () => {
+    render: ({ items, status }) => {
         return html`
         <div class="todos">
-            <div>${todoSignal.value.status}</div>
+            <div><button @click="${todoAdd}" ?disabled=${status == 'loading'}>add</button></div>
+            <div>${status}</div>
             <div class="todo-list">
-                ${todoSignal.value.items.map(TodoItem)}
+                ${items.map(TodoItem)}
             </div>
         <div>
     `

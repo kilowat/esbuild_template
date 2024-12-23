@@ -3,6 +3,7 @@ import { Signal, effect, signal as createSignal } from '@preact/signals-core';
 
 export { html } from 'uhtml/reactive';
 export { htmlFor } from 'uhtml/keyed';
+
 const uRender = reactive(effect);
 
 class EnhancedSignal<T> extends Signal<T> {
@@ -50,8 +51,8 @@ export interface AttributeChangeCallback<E extends HTMLElement> {
     newValue: string | null;
 }
 
-export interface BaseConsumerProps<T extends HTMLElement> {
-    render?: () => (() => any) | any;
+export interface BaseConsumerProps<T extends HTMLElement, S = any> {
+    render?: (state: S extends object ? S : { state: S }) => (() => any) | any;
     connected?: (params: ElementCallback<T>) => void;
     disconnected?: (params: ElementCallback<T>) => void;
 }
@@ -65,7 +66,7 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any>({
     observedAttributes = [],
     listen,
     signal,
-}: BaseConsumerProps<T> & {
+}: BaseConsumerProps<T, S> & {
     tagName: string;
     attributeChanged?: (params: AttributeChangeCallback<T>) => void;
     observedAttributes?: string[];
@@ -88,7 +89,16 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any>({
             connected?.({ element });
 
             if (render) {
-                const renderFn = render.bind(this);
+                const renderFn = () => {
+                    if (!signal) return render.bind(this)({ state: undefined } as any);
+
+                    const value = signal.value;
+                    const param = (typeof value === 'object' && value !== null) ?
+                        value :
+                        { state: value };
+
+                    return render.bind(this)(param as S extends object ? S : { state: S });
+                };
                 this.renderDisposer = uRender(element, renderFn);
             }
 
