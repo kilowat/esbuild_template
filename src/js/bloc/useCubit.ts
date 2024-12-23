@@ -1,5 +1,6 @@
 type StateListener<T> = (state: T) => void;
 type StateComparer<T> = (prev: T, next: T) => boolean;
+type ComputedFn<T> = () => T;
 
 interface ListenerEntry<T> {
     id: number;
@@ -10,19 +11,28 @@ interface ListenerEntry<T> {
     element?: HTMLElement;
 }
 
+interface ComputedValue<T> {
+    value: T;
+    isDirty: boolean;
+    dependencies: Set<unknown>;
+}
+
 export function useCubit<T>(initialState: T) {
     let state = initialState;
     let prevState = initialState;
     let nextListenerId = 0;
 
-    // Используем Map вместо Set для более быстрого доступа и удаления
+    // Используем WeakMap для элементов
+    const elementSubscriptions = new WeakMap<HTMLElement, () => void>();
+
+    // Храним обычные подписки в Map
     const listeners = new Map<number, ListenerEntry<T>>();
 
-    // Очередь обновлений для батчинга
+    // Кэш для вычисляемых значений
+    const computedValues = new Map<ComputedFn<unknown>, ComputedValue<unknown>>();
+
     let pendingUpdates: Array<Partial<T>> = [];
     let isUpdateScheduled = false;
-
-    // Кэш для промиса микротаски
     let updatePromise: Promise<void> | null = null;
 
     // Оптимизированное сравнение объектов
@@ -45,13 +55,39 @@ export function useCubit<T>(initialState: T) {
         return false;
     };
 
-    // Оптимизированное применение обновлений
+    // Функция для создания вычисляемых значений
+    function computed<R>(fn: ComputedFn<R>) {
+        let computedValue = computedValues.get(fn) as ComputedValue<R> | undefined;
+
+        if (!computedValue) {
+            computedValue = {
+                value: fn(),
+                isDirty: true,
+                dependencies: new Set()
+            };
+            computedValues.set(fn, computedValue);
+        }
+
+        if (computedValue.isDirty) {
+            computedValue.value = fn();
+            computedValue.isDirty = false;
+        }
+
+        return computedValue.value;
+    }
+
+    // Пометить все вычисляемые значения как грязные
+    function markComputedDirty() {
+        for (const computed of computedValues.values()) {
+            computed.isDirty = true;
+        }
+    }
+
     function applyUpdates() {
         if (pendingUpdates.length === 0) return;
 
         prevState = state;
 
-        // Объединяем все обновления в одно
         const finalUpdate = pendingUpdates.reduce((acc, update) => {
             if (typeof state === 'object' && state !== null && typeof update === 'object') {
                 return { ...acc, ...update };
@@ -59,33 +95,40 @@ export function useCubit<T>(initialState: T) {
             return update;
         }, {} as Partial<T>);
 
-        // Применяем обновление
         if (typeof state === 'object' && state !== null && typeof finalUpdate === 'object') {
             state = { ...state, ...finalUpdate } as T;
         } else {
             state = finalUpdate as T;
         }
 
-        // Очищаем очередь
         pendingUpdates = [];
         isUpdateScheduled = false;
         updatePromise = null;
 
-        // Уведомляем слушателей
+        // Помечаем все вычисляемые значения как грязные
+        markComputedDirty();
+
         const entries = Array.from(listeners.values());
         for (const entry of entries) {
-            const { listener, build, buildWhen, listenWhen } = entry;
+            const { listener, build, buildWhen, listenWhen, element } = entry;
 
             const shouldBuild = build && (!buildWhen || buildWhen(prevState, state));
             const shouldListen = listener && (!listenWhen || listenWhen(prevState, state));
 
             if (shouldBuild) build(state);
             if (shouldListen) listener(state);
+
+            // Если есть элемент, обновляем его подписку в WeakMap
+            if (element) {
+                const unsubscribe = () => {
+                    listeners.delete(entry.id);
+                };
+                elementSubscriptions.set(element, unsubscribe);
+            }
         }
     }
 
     function emit(update: Partial<T> | T): void {
-        // Проверяем, есть ли реальные изменения
         if (typeof update === 'object' && !hasChanged(state, { ...state, ...update })) {
             return;
         }
@@ -109,7 +152,15 @@ export function useCubit<T>(initialState: T) {
         const entry = { id, listener, build, element, buildWhen, listenWhen };
         listeners.set(id, entry);
 
-        // Уведомляем о текущем состоянии при подписке
+        // Если есть элемент, сохраняем функцию отписки в WeakMap
+        if (element) {
+            const unsubscribe = () => {
+                listeners.delete(id);
+                elementSubscriptions.delete(element);
+            };
+            elementSubscriptions.set(element, unsubscribe);
+        }
+
         if (listener && (!listenWhen || listenWhen(prevState, state))) {
             listener(state);
         }
@@ -119,6 +170,9 @@ export function useCubit<T>(initialState: T) {
 
         return () => {
             listeners.delete(id);
+            if (element) {
+                elementSubscriptions.delete(element);
+            }
         };
     }
 
@@ -127,6 +181,7 @@ export function useCubit<T>(initialState: T) {
         get prevState() { return prevState; },
         emit,
         subscribe,
+        computed
     };
 }
 
