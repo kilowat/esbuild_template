@@ -1,8 +1,7 @@
 import { reactive } from 'uhtml/reactive';
 import { Signal, effect, signal as createSignal } from '@preact/signals-core';
 
-export { html } from 'uhtml/reactive';
-export { htmlFor } from 'uhtml/keyed';
+export { html, htmlFor } from 'uhtml/reactive';
 
 const uRender = reactive(effect);
 
