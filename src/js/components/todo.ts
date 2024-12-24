@@ -47,13 +47,13 @@ export default cmp({
     listen(params) {
         console.log('was changhed:', params)
     },
-    render: ({ items, status }) => {
+    render: ({ state }) => {
         return html`
         <div class="todos">
             <div><button @click="${todoAdd}" ?disabled=${status == 'loading'}>add</button></div>
             <div>${status}</div>
             <div class="todo-list">
-                ${items.map(TodoItem)}
+                ${state.items.map(TodoItem)}
             </div>
         <div>
     `

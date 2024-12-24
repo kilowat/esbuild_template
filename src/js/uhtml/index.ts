@@ -1,5 +1,5 @@
 import { reactive } from 'uhtml/reactive';
-import { Signal, effect, signal as createSignal } from '@preact/signals-core';
+import { Signal, effect, signal as createSignal, computed as preactComputed } from '@preact/signals-core';
 
 export { html, htmlFor } from 'uhtml/reactive';
 
@@ -50,13 +50,25 @@ export interface AttributeChangeCallback<E extends HTMLElement> {
     newValue: string | null;
 }
 
-export interface BaseConsumerProps<T extends HTMLElement, S = any> {
-    render?: (state: S extends object ? S : { state: S }) => (() => any) | any;
+export interface BaseConsumerProps<T extends HTMLElement, S = unknown, C = {}, A = {}> {
+    render?: (props: { state: S; computed: C; actions: A }) => (() => unknown) | unknown;
     connected?: (params: ElementCallback<T>) => void;
     disconnected?: (params: ElementCallback<T>) => void;
 }
 
-export function cmp<T extends HTMLElement = HTMLElement, S = any>({
+export interface ListenerParams<S> {
+    newValue: S;
+    oldValue: S;
+}
+
+export function computed<S, R>(
+    signal: Signal<S>,
+    computeFn: (state: S) => R
+): Signal<R> {
+    return preactComputed(() => computeFn(signal.value));
+}
+
+export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}>({
     tagName,
     connected,
     render,
@@ -65,18 +77,22 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any>({
     observedAttributes = [],
     listen,
     signal,
-}: BaseConsumerProps<T, S> & {
+    computed = {} as C,
+    actions = {} as A,
+}: {
     tagName: string;
+    signal?: Signal<S>;
+    listen?: (params: ListenerParams<S>) => void;
     attributeChanged?: (params: AttributeChangeCallback<T>) => void;
     observedAttributes?: string[];
-    listen?: (params: { newValue: S; oldValue: S }) => void;
-    signal?: Signal<S>;
-}): void {
+    computed?: C;
+    actions?: A;
+} & BaseConsumerProps<T, S, C, A>): void {
     if (customElements.get(tagName)) return;
 
     class CustomElement extends HTMLElement {
         private renderDisposer?: ReturnType<typeof uRender>;
-        private listnerDiposer?: ReturnType<typeof effect>;
+        private listenerDisposer?: ReturnType<typeof effect>;
         private currentValue?: S;
 
         static get observedAttributes() {
@@ -84,32 +100,36 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any>({
         }
 
         connectedCallback() {
-            const element = this as unknown as T;
-            connected?.({ element });
+            try {
+                const element = this as unknown as T;
+                connected?.({ element });
 
-            if (render) {
-                const renderFn = () => {
-                    if (!signal) return render.bind(this)({ state: undefined } as any);
+                if (render) {
+                    const renderFn = () => {
+                        return render.bind(this)({
+                            state: signal?.value ?? ({} as unknown as S),
+                            computed,
+                            actions,
+                        });
+                    };
+                    this.renderDisposer = uRender(element, renderFn);
+                }
 
-                    const value = signal.value;
-                    const param = (typeof value === 'object' && value !== null) ?
-                        value :
-                        { state: value };
-
-                    return render.bind(this)(param as S extends object ? S : { state: S });
-                };
-                this.renderDisposer = uRender(element, renderFn);
-            }
-
-            if (signal && listen) {
-                this.currentValue = signal.value;
-                this.listnerDiposer = effect(() => {
-                    const newValue = signal.value;
-                    if (this.currentValue !== newValue) {
-                        listen({ newValue, oldValue: this.currentValue! });
-                        this.currentValue = newValue;
-                    }
-                });
+                if (signal && listen) {
+                    this.currentValue = signal.value;
+                    this.listenerDisposer = effect(() => {
+                        const newValue = signal?.value;
+                        if (this.currentValue !== newValue) {
+                            listen({
+                                newValue,
+                                oldValue: this.currentValue ?? ({} as unknown as S),
+                            });
+                            this.currentValue = newValue;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error(`Error in ${tagName} connectedCallback:`, error);
             }
         }
 
@@ -118,8 +138,8 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any>({
                 this.renderDisposer();
             }
 
-            if (this.listnerDiposer && typeof this.listnerDiposer === 'function') {
-                this.listnerDiposer();
+            if (this.listenerDisposer && typeof this.listenerDisposer === 'function') {
+                this.listenerDisposer();
             }
 
             disconnected?.({ element: this as unknown as T });
