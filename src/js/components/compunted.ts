@@ -27,14 +27,17 @@ cmp({
     state: counterState,
     computed: computedProps,
     actions: actions,
-    render: ({ state, computed, actions }) => html`
-    <div>
-        <p>Counter: ${state}</p>
-        <p>Double: ${computed.double}</p>
-        <p>Is Even: ${computed.isEvent}</p>
-        <p>Is odd: ${isOdd()}</p>
-        <button @click=${actions.increment} id="increment">Increment</button>
-        <button @click=${actions.decrement}>Decrement</button>
-    </div>
-    `,
+
+    render({ state, computed, actions, slots }) {
+        return html`
+        <div>
+            <p>Counter: ${state}</p>
+            <p>Double: ${computed.double}</p>
+            <p>Is Even: ${computed.isEvent}</p>
+            <p>Is odd: ${isOdd()}</p>
+            ${slots.header || html`<p>Default Header</p>`}
+            <button @click=${actions.increment} id="increment">Increment</button>
+            <button @click=${actions.decrement}>Decrement</button>
+        </div>`
+    },
 });
