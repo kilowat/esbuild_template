@@ -16,7 +16,7 @@ class EnhancedSignal<T> extends Signal<T> {
     }
 }
 
-export function signal<T>(initialValue: T): EnhancedSignal<T> {
+export function state<T>(initialValue: T): EnhancedSignal<T> {
     const baseSignal = createSignal(initialValue);
     Object.setPrototypeOf(baseSignal, EnhancedSignal.prototype);
     return baseSignal as EnhancedSignal<T>;
@@ -61,7 +61,7 @@ export interface ListenerParams<S> {
     oldValue: S;
 }
 
-export function computed<S, R>(
+export function compute<S, R>(
     signal: Signal<S>,
     computeFn: (state: S) => R
 ): Signal<R> {
@@ -76,12 +76,12 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}
     attributeChanged,
     observedAttributes = [],
     listen,
-    signal,
+    state,
     computed = {} as C,
     actions = {} as A,
 }: {
     tagName: string;
-    signal?: Signal<S>;
+    state?: Signal<S>;
     listen?: (params: ListenerParams<S>) => void;
     attributeChanged?: (params: AttributeChangeCallback<T>) => void;
     observedAttributes?: string[];
@@ -91,9 +91,22 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}
     if (customElements.get(tagName)) return;
 
     class CustomElement extends HTMLElement {
+        public get state() {
+            return state;
+        }
+
+        public get actions() {
+            return actions;
+        }
+
+        public get computed() {
+            return computed;
+        }
+
         private renderDisposer?: ReturnType<typeof uRender>;
         private listenerDisposer?: ReturnType<typeof effect>;
         private currentValue?: S;
+
 
         static get observedAttributes() {
             return observedAttributes;
@@ -107,7 +120,7 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}
                 if (render) {
                     const renderFn = () => {
                         return render.bind(this)({
-                            state: signal?.value ?? ({} as unknown as S),
+                            state: state?.value ?? ({} as unknown as S),
                             computed,
                             actions,
                         });
@@ -115,10 +128,10 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}
                     this.renderDisposer = uRender(element, renderFn);
                 }
 
-                if (signal && listen) {
-                    this.currentValue = signal.value;
+                if (state && listen) {
+                    this.currentValue = state.value;
                     this.listenerDisposer = effect(() => {
-                        const newValue = signal?.value;
+                        const newValue = state?.value;
                         if (this.currentValue !== newValue) {
                             listen({
                                 newValue,

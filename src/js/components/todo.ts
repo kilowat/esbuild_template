@@ -1,4 +1,4 @@
-import { cmp, html, htmlFor, signal } from "../uhtml";
+import { cmp, html, htmlFor, state } from "../uhtml";
 import { awaiter } from "../utils/awaiter";
 
 interface ToDo {
@@ -11,27 +11,27 @@ interface TodoState {
     items: ToDo[]
 }
 
-export const todoSignal = signal<TodoState>({
+export const todoState = state<TodoState>({
     status: 'init',
     items: []
 })
 
 export const todoInit = async () => {
-    todoSignal.emit({ status: 'loading' });
+    todoState.emit({ status: 'loading' });
     await awaiter(1);
-    const { items } = todoSignal.value;
+    const { items } = todoState.value;
     const newItem = { id: `${items.length + 1}`, name: `item${items.length + 1}` };
     const newItems = [...items, newItem];
-    todoSignal.emit({ status: 'ready', items: newItems, });
+    todoState.emit({ status: 'ready', items: newItems, });
 }
 
 export const todoAdd = async () => {
-    todoSignal.emit({ status: 'loading' });
+    todoState.emit({ status: 'loading' });
     await awaiter(1);
-    const { items } = todoSignal.value;
+    const { items } = todoState.value;
     const newItem = { id: `${items.length + 1}`, name: `item${items.length + 1}` };
     const newItems = [...items, newItem];
-    todoSignal.emit({ status: 'ready', items: newItems, });
+    todoState.emit({ status: 'ready', items: newItems, });
 }
 
 export const todoRemove = () => { }
@@ -40,7 +40,7 @@ export const todoUpdate = () => { }
 
 export default cmp({
     tagName: 'todo-list',
-    signal: todoSignal,
+    state: todoState,
     connected() {
         todoInit()
     },
