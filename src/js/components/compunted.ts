@@ -14,6 +14,9 @@ createComponent({
         increment: () => state.emit(state.value + 1),
         decrement: () => state.emit(state.value - 1),
     },
+    connected(params) {
+        console.log(params)
+    },
     render({ state, computed, actions, slots }) {
         return html`
         <div>

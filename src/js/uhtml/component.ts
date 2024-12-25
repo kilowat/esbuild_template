@@ -3,29 +3,27 @@ import { reactive } from 'uhtml/reactive';
 import { Signal, effect } from '@preact/signals-core';
 import { ComputedProps, createComputed } from './state';
 
-interface ElementCallback<E extends HTMLElement> {
-    element: E;
+
+interface Context<S = unknown, C = {}, A = {}> {
+    element: HTMLElement;
+    state: S;
+    computed: ComputedProps<C>;
+    actions: A,
+    slots: Record<string, Node[]>,
 }
 
-interface AttributeChangeCallback<E extends HTMLElement> {
-    element: E;
+interface AttributeChangeCallback extends Context {
     name: string;
     oldValue: string | null;
     newValue: string | null;
 }
 
-interface BaseConsumerProps<T extends HTMLElement, S = unknown, C = {}, A = {}> {
-    render?: (props: { state: S; computed: ComputedProps<C>; actions: A, slots: Record<string, Node[]>, }) => (() => unknown) | unknown;
-    connected?: (params: ElementCallback<T>) => void;
-    disconnected?: (params: ElementCallback<T>) => void;
-}
-
-interface ListenerParams<S> {
+interface ListenerParams<S> extends Context {
     newValue: S;
     oldValue: S;
 }
 
-export function createComponent<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}>({
+export function createComponent<S = any, C = {}, A extends {} = {}>({
     tagName,
     connected,
     render,
@@ -39,16 +37,20 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
 }: {
     tagName: string;
     state?: Signal<S>;
+    render?: (context: Context<S, C, A>) => (() => unknown) | unknown;
+    connected?: (context: Context<S, C, A>) => void;
+    disconnected?: (context: Context<S, C, A>) => void;
     listen?: (params: ListenerParams<S>) => void;
-    attributeChanged?: (params: AttributeChangeCallback<T>) => void;
+    attributeChanged?: (params: AttributeChangeCallback) => void;
     observedAttributes?: string[];
     computed?: C;
     actions?: A;
-} & BaseConsumerProps<T, S, C, A>): void {
+}): void {
     if (customElements.get(tagName)) return;
 
     const uRender = reactive(effect);
     const decorateComputed = createComputed(computed ?? {}) as ComputedProps<C>
+
     class CustomElement extends HTMLElement {
         public get state() {
             return state;
@@ -89,7 +91,7 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
             return effect(() => {
                 const currentValue = stateSignal.value;
                 if (previousValue !== currentValue) {
-                    callback({ newValue: currentValue, oldValue: previousValue });
+                    callback({ newValue: currentValue, oldValue: previousValue, ...this.getContext() });
                     previousValue = currentValue;
                 }
             });
@@ -97,12 +99,10 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
 
         connectedCallback() {
             try {
-                connected?.({ element: this as unknown as T });
-
-                this.doListen();
-
                 requestAnimationFrame(() => {
                     this.collectSlots();
+                    connected?.(this.getContext());
+                    this.doListen();
                     this.doRender();
                 });
             } catch (error) {
@@ -146,16 +146,21 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
             };
         }
 
+        private getContext() {
+            return {
+                state: state?.value ?? ({} as unknown as S),
+                computed: decorateComputed,
+                actions,
+                slots: this.slotContent,
+                element: (this as HTMLElement),
+            }
+        }
+
         private doRender() {
             if (!render) return;
 
             const renderFn = () => {
-                return render.bind(this)({
-                    state: state?.value ?? ({} as unknown as S),
-                    computed: decorateComputed,
-                    actions,
-                    slots: this.slotContent,
-                });
+                return render.bind(this)(this.getContext());
             };
 
             this.renderDisposer = uRender(this, renderFn);
@@ -178,12 +183,12 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
 
             this.subscribeDisposer.map((unsub) => unsub());
 
-            disconnected?.({ element: this as unknown as T });
+            disconnected?.(this.getContext());
         }
 
         attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
             attributeChanged?.({
-                element: this as unknown as T,
+                ...this.getContext(),
                 name,
                 oldValue,
                 newValue,
