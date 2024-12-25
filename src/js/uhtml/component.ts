@@ -69,7 +69,9 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
             const dispose = effect(() => {
                 callback(state.value);
             });
+
             this.subScirbeDisposer.push(dispose);
+
             return dispose;
         }
 
@@ -87,14 +89,14 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
 
         connectedCallback() {
             try {
-                const element = this as unknown as T;
-                connected?.({ element });
+                connected?.({ element: this as unknown as T });
+
+                this.doListen();
 
                 requestAnimationFrame(() => {
                     this.collectSlots();
-                    this.doRender(element)
+                    this.doRender();
                 });
-
             } catch (error) {
                 console.error(`Error in ${tagName} connectedCallback:`, error);
             }
@@ -128,7 +130,7 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
                 }
             };
 
-            Array.from(this.childNodes ?? []).forEach(processNode);
+            (this.childNodes ?? []).forEach(processNode);
 
             this.slotContent = {
                 ...slots.named,
@@ -136,32 +138,35 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
             };
         }
 
-        private doRender(element: HTMLElement) {
-            if (render) {
-                const renderFn = () => {
-                    return render.bind(this)({
-                        state: state?.value ?? ({} as unknown as S),
-                        computed,
-                        actions,
-                        slots: this.slotContent,
-                    });
-                };
-                this.renderDisposer = uRender(element, renderFn);
-            }
+        private doRender() {
+            if (!render) return;
 
-            if (state && listen) {
-                this.currentValue = state.peek();
-                this.listenerDisposer = effect(() => {
-                    const newValue = state?.value;
-                    if (this.currentValue !== newValue) {
-                        listen({
-                            newValue,
-                            oldValue: this.currentValue ?? ({} as unknown as S),
-                        });
-                        this.currentValue = newValue;
-                    }
+            const renderFn = () => {
+                return render.bind(this)({
+                    state: state?.value ?? ({} as unknown as S),
+                    computed,
+                    actions,
+                    slots: this.slotContent,
                 });
-            }
+            };
+
+            this.renderDisposer = uRender(this, renderFn);
+        }
+
+        private doListen() {
+            if (!state || !listen) return;
+
+            this.currentValue = state.peek();
+            this.listenerDisposer = effect(() => {
+                const newValue = state?.value;
+                if (this.currentValue !== newValue) {
+                    listen({
+                        newValue,
+                        oldValue: this.currentValue ?? ({} as unknown as S),
+                    });
+                    this.currentValue = newValue;
+                }
+            });
         }
 
         disconnectedCallback() {
