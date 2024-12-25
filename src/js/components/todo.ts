@@ -1,4 +1,4 @@
-import { cmp, html, htmlFor, state } from "../uhtml";
+import { cmp, html, htmlFor, createState } from "../uhtml";
 import { awaiter } from "../utils/awaiter";
 
 interface ToDo {
@@ -11,7 +11,7 @@ interface TodoState {
     items: ToDo[]
 }
 
-export const todoState = state<TodoState>({
+export const todoState = createState<TodoState>({
     status: 'init',
     items: []
 })
@@ -43,9 +43,6 @@ export default cmp({
     state: todoState,
     connected() {
         todoInit()
-    },
-    listen(params) {
-        console.log('was changhed:', params)
     },
     render: ({ state }) => {
         return html`
