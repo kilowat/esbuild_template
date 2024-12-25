@@ -1,6 +1,7 @@
 
 import { reactive } from 'uhtml/reactive';
 import { Signal, effect } from '@preact/signals-core';
+import { ComputedProps, createComputed } from './state';
 
 interface ElementCallback<E extends HTMLElement> {
     element: E;
@@ -14,7 +15,7 @@ interface AttributeChangeCallback<E extends HTMLElement> {
 }
 
 interface BaseConsumerProps<T extends HTMLElement, S = unknown, C = {}, A = {}> {
-    render?: (props: { state: S; computed: C; actions: A, slots: Record<string, Node[]>, }) => (() => unknown) | unknown;
+    render?: (props: { state: S; computed: ComputedProps<C>; actions: A, slots: Record<string, Node[]>, }) => (() => unknown) | unknown;
     connected?: (params: ElementCallback<T>) => void;
     disconnected?: (params: ElementCallback<T>) => void;
 }
@@ -47,7 +48,7 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
     if (customElements.get(tagName)) return;
 
     const uRender = reactive(effect);
-
+    const decorateComputed = createComputed(computed ?? {}) as ComputedProps<C>
     class CustomElement extends HTMLElement {
         public get state() {
             return state;
@@ -58,7 +59,7 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
         }
 
         public get computed() {
-            return computed;
+            return decorateComputed;
         }
 
         public subscribeToState(callback: (params: ListenerParams<S>) => void) {
@@ -151,7 +152,7 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
             const renderFn = () => {
                 return render.bind(this)({
                     state: state?.value ?? ({} as unknown as S),
-                    computed,
+                    computed: decorateComputed,
                     actions,
                     slots: this.slotContent,
                 });

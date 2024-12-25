@@ -2,22 +2,18 @@ import { createComponent, compute, createComputed, html, createState } from "../
 
 export const state = createState(0);
 
-export const computed = createComputed({
-    double: () => compute(state, value => value * 2),
-    isEven: () => compute(state, value => value % 2 === 0),
-    isOdd: () => compute(state, value => value % 2 !== 0)
-});
-
-export const actions = {
-    increment: () => state.emit(state.value + 1),
-    decrement: () => state.emit(state.value - 1),
-};
-
 createComponent({
-    tagName: 'counter-component-2',
+    tagName: 'counter-component',
     state,
-    computed,
-    actions,
+    computed: {
+        double: () => compute(state, value => value * 2),
+        isEven: () => compute(state, value => value % 2 === 0),
+        isOdd: () => compute(state, value => value % 2 !== 0)
+    },
+    actions: {
+        increment: () => state.emit(state.value + 1),
+        decrement: () => state.emit(state.value - 1),
+    },
     render({ state, computed, actions, slots }) {
         return html`
         <div>

@@ -4,7 +4,7 @@ export { Signal }
 
 type UnwrapSignal<T> = T extends Signal<infer U> ? U : T;
 
-type ComputedProps<T> = {
+export type ComputedProps<T> = {
     [K in keyof T]: T[K] extends (...args: any[]) => any
     ? ReturnType<T[K]>
     : UnwrapSignal<T[K]>
