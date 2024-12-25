@@ -24,8 +24,6 @@ interface ListenerParams<S> {
     oldValue: S;
 }
 
-const uRender = reactive(effect);
-
 export function createComponent<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}>({
     tagName,
     connected,
@@ -48,9 +46,9 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
 } & BaseConsumerProps<T, S, C, A>): void {
     if (customElements.get(tagName)) return;
 
-    class CustomElement extends HTMLElement {
-        private slotContent: Record<string, Node[]> = {};
+    const uRender = reactive(effect);
 
+    class CustomElement extends HTMLElement {
         public get state() {
             return state;
         }
@@ -63,28 +61,33 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
             return computed;
         }
 
-        public subscribeToState(callback: (value: S) => void) {
+        public subscribeToState(callback: (params: ListenerParams<S>) => void) {
             if (!state) return () => { };
 
-            const dispose = effect(() => {
-                callback(state.value);
-            });
-
-            this.subScirbeDisposer.push(dispose);
-
-            return dispose;
+            return this.setupEffect(state, callback);
         }
+
+        private slotContent: Record<string, Node[]> = {};
 
         private renderDisposer?: ReturnType<typeof uRender>;
 
         private listenerDisposer?: ReturnType<typeof effect>;
 
-        private subScirbeDisposer: ReturnType<typeof effect>[] = [];
-
-        private currentValue?: S;
+        private subscribeDisposer: ReturnType<typeof effect>[] = [];
 
         static get observedAttributes() {
             return observedAttributes;
+        }
+
+        private setupEffect<T>(stateSignal: Signal<T>, callback: (params: ListenerParams<T>) => void): ReturnType<typeof effect> {
+            let previousValue = stateSignal.peek();
+            return effect(() => {
+                const currentValue = stateSignal.value;
+                if (previousValue !== currentValue) {
+                    callback({ newValue: currentValue, oldValue: previousValue });
+                    previousValue = currentValue;
+                }
+            });
         }
 
         connectedCallback() {
@@ -156,17 +159,7 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
         private doListen() {
             if (!state || !listen) return;
 
-            this.currentValue = state.peek();
-            this.listenerDisposer = effect(() => {
-                const newValue = state?.value;
-                if (this.currentValue !== newValue) {
-                    listen({
-                        newValue,
-                        oldValue: this.currentValue ?? ({} as unknown as S),
-                    });
-                    this.currentValue = newValue;
-                }
-            });
+            this.listenerDisposer = this.setupEffect(state, listen);
         }
 
         disconnectedCallback() {
@@ -178,7 +171,7 @@ export function createComponent<T extends HTMLElement = HTMLElement, S = any, C 
                 this.listenerDisposer();
             }
 
-            this.subScirbeDisposer.map((unsub) => unsub());
+            this.subscribeDisposer.map((unsub) => unsub());
 
             disconnected?.({ element: this as unknown as T });
         }
