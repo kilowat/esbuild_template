@@ -26,7 +26,7 @@ interface ListenerParams<S> {
 
 const uRender = reactive(effect);
 
-export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}>({
+export function createComponent<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}>({
     tagName,
     connected,
     render,
@@ -50,6 +50,7 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}
 
     class CustomElement extends HTMLElement {
         private slotContent: Record<string, Node[]> = {};
+
         public get state() {
             return state;
         }
@@ -62,8 +63,22 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}
             return computed;
         }
 
+        public subscribeToState(callback: (value: S) => void) {
+            if (!state) return () => { };
+
+            const dispose = effect(() => {
+                callback(state.value);
+            });
+            this.subScirbeDisposer.push(dispose);
+            return dispose;
+        }
+
         private renderDisposer?: ReturnType<typeof uRender>;
+
         private listenerDisposer?: ReturnType<typeof effect>;
+
+        private subScirbeDisposer: ReturnType<typeof effect>[] = [];
+
         private currentValue?: S;
 
         static get observedAttributes() {
@@ -135,7 +150,7 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}
             }
 
             if (state && listen) {
-                this.currentValue = state.value;
+                this.currentValue = state.peek();
                 this.listenerDisposer = effect(() => {
                     const newValue = state?.value;
                     if (this.currentValue !== newValue) {
@@ -157,6 +172,8 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}
             if (this.listenerDisposer && typeof this.listenerDisposer === 'function') {
                 this.listenerDisposer();
             }
+
+            this.subScirbeDisposer.map((unsub) => unsub());
 
             disconnected?.({ element: this as unknown as T });
         }

@@ -1,4 +1,4 @@
-import { cmp, compute, createComputed, html, createState } from "../uhtml";
+import { createComponent, compute, createComputed, html, createState } from "../uhtml";
 
 
 export const state = createState(0);
@@ -10,11 +10,11 @@ export const computed = createComputed({
 });
 
 export const actions = {
-    increment: () => state.emit(state.value + 1),
+    increment: () => state.emit(state.peek() + 1),
     decrement: () => state.emit(state.value - 1),
 };
 
-cmp({
+createComponent({
     tagName: 'counter-component',
     state,
     computed,

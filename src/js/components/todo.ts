@@ -1,4 +1,4 @@
-import { cmp, html, htmlFor, createState } from "../uhtml";
+import { createComponent, html, htmlFor, createState } from "../uhtml";
 import { awaiter } from "../utils/awaiter";
 
 interface ToDo {
@@ -38,7 +38,7 @@ export const todoRemove = () => { }
 
 export const todoUpdate = () => { }
 
-export default cmp({
+export default createComponent({
     tagName: 'todo-list',
     state: todoState,
     connected() {
@@ -48,7 +48,6 @@ export default cmp({
         return html`
         <div class="todos">
             <div><button @click="${todoAdd}" ?disabled=${status == 'loading'}>add</button></div>
-            <div>${status}</div>
             <div class="todo-list">
                 ${state.items.map(TodoItem)}
             </div>
