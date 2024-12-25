@@ -3,6 +3,28 @@ import { Signal, effect, signal as createSignal, computed as preactComputed } fr
 
 export { html, htmlFor } from 'uhtml/reactive';
 
+export interface ElementCallback<E extends HTMLElement> {
+    element: E;
+}
+
+export interface AttributeChangeCallback<E extends HTMLElement> {
+    element: E;
+    name: string;
+    oldValue: string | null;
+    newValue: string | null;
+}
+
+export interface BaseConsumerProps<T extends HTMLElement, S = unknown, C = {}, A = {}> {
+    render?: (props: { state: S; computed: C; actions: A, slots: Record<string, Node[]>, }) => (() => unknown) | unknown;
+    connected?: (params: ElementCallback<T>) => void;
+    disconnected?: (params: ElementCallback<T>) => void;
+}
+
+export interface ListenerParams<S> {
+    newValue: S;
+    oldValue: S;
+}
+
 const uRender = reactive(effect);
 
 class EnhancedSignal<T> extends Signal<T> {
@@ -37,28 +59,6 @@ function cloneDeep<T>(obj: T): T {
     }
 
     return clonedObj as T;
-}
-
-export interface ElementCallback<E extends HTMLElement> {
-    element: E;
-}
-
-export interface AttributeChangeCallback<E extends HTMLElement> {
-    element: E;
-    name: string;
-    oldValue: string | null;
-    newValue: string | null;
-}
-
-export interface BaseConsumerProps<T extends HTMLElement, S = unknown, C = {}, A = {}> {
-    render?: (props: { state: S; computed: C; actions: A, slots: Record<string, Node[]>, }) => (() => unknown) | unknown;
-    connected?: (params: ElementCallback<T>) => void;
-    disconnected?: (params: ElementCallback<T>) => void;
-}
-
-export interface ListenerParams<S> {
-    newValue: S;
-    oldValue: S;
 }
 
 export function compute<S, R>(
@@ -128,27 +128,39 @@ export function cmp<T extends HTMLElement = HTMLElement, S = any, C = {}, A = {}
         }
 
         private collectSlots() {
-            const defaultSlot: Node[] = [];
-            const namedSlots: Record<string, Node[]> = {};
-            const childNodes = this.childNodes ?? [];
+            const slots = {
+                default: [] as Node[],
+                named: {} as Record<string, Node[]>
+            };
 
-            Array.from(childNodes).forEach(node => {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    const slotName = (node as HTMLElement).getAttribute('data-slot');
-                    if (slotName) {
-                        if (!namedSlots[slotName]) {
-                            namedSlots[slotName] = [];
-                        }
-                        namedSlots[slotName].push(node);
-                    } else {
-                        defaultSlot.push(node);
-                    }
-                } else {
-                    defaultSlot.push(node);
+            const processElementNode = (node: Element) => {
+                const slotName = node.getAttribute('data-slot');
+
+                if (!slotName) {
+                    slots.default.push(node);
+                    return;
                 }
-            });
 
-            this.slotContent = { ...namedSlots, default: defaultSlot };
+                if (!slots.named[slotName]) {
+                    slots.named[slotName] = [];
+                }
+                slots.named[slotName].push(node);
+            };
+
+            const processNode = (node: Node) => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    processElementNode(node as Element);
+                } else {
+                    slots.default.push(node);
+                }
+            };
+
+            Array.from(this.childNodes ?? []).forEach(processNode);
+
+            this.slotContent = {
+                ...slots.named,
+                default: slots.default
+            };
         }
 
         private doRender(element: HTMLElement) {

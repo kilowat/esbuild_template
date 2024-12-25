@@ -21,7 +21,7 @@ const actions = {
     decrement: () => counterState.emit(counterState.value - 1),
 };
 
-// Создаем компонент
+
 cmp({
     tagName: 'counter-component',
     state: counterState,
