@@ -1,5 +1,7 @@
 import { Signal, signal as createSignal, computed as preactComputed } from '@preact/signals-core';
 
+export { Signal }
+
 type UnwrapSignal<T> = T extends Signal<infer U> ? U : T;
 
 type ComputedProps<T> = {
