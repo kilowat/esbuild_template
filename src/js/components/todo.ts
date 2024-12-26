@@ -47,7 +47,7 @@ export default createComponent({
     render: ({ state }) => {
         return html`
         <div class="todos">
-            <div><button @click="${todoAdd}" ?disabled=${status == 'loading'}>add</button></div>
+            <div><button @click="${todoAdd}" ?disabled=${state.value.status == 'loading'}>add</button></div>
             <div class="todo-list">
                 ${state.value.items.map(TodoItem)}
             </div>

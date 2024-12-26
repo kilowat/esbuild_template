@@ -1,7 +1,5 @@
 import { Signal, signal as createSignal, computed as preactComputed } from '@preact/signals-core';
 
-export { Signal }
-
 type UnwrapSignal<T> = T extends Signal<infer U> ? U : T;
 
 export type ComputedProps<T> = {
@@ -33,7 +31,7 @@ function cloneDeep<T>(obj: T): T {
     return clonedObj as T;
 }
 
-export class EnhancedSignal<T> extends Signal<T> {
+export class State<T> extends Signal<T> {
     emit(value: Partial<T> | T): void {
         if (typeof value === 'object' && value !== null && typeof this.value === 'object') {
             const currentClone = cloneDeep(this.value);
@@ -44,10 +42,10 @@ export class EnhancedSignal<T> extends Signal<T> {
     }
 }
 
-export function createState<T>(initialValue: T): EnhancedSignal<T> {
+export function createState<T>(initialValue: T): State<T> {
     const baseSignal = createSignal(initialValue);
-    Object.setPrototypeOf(baseSignal, EnhancedSignal.prototype);
-    return baseSignal as EnhancedSignal<T>;
+    Object.setPrototypeOf(baseSignal, State.prototype);
+    return baseSignal as State<T>;
 }
 
 export function compute<S, R>(
@@ -69,24 +67,4 @@ export function compute<S, R>(
     };
 
     return result;
-}
-
-export function createComputed<T extends Record<string, unknown>>(
-    computedDefs: {
-        [K in keyof T]: () => Signal<T[K]> | ComputedResult<T[K]>
-    }
-): ComputedProps<T> {
-    const computed = {} as ComputedProps<T>;
-
-    for (const key in computedDefs) {
-        Object.defineProperty(computed, key, {
-            get: () => {
-                const result = computedDefs[key]();
-                return 'value' in result ? result.value : result;
-            },
-            enumerable: true
-        });
-    }
-
-    return computed;
 }

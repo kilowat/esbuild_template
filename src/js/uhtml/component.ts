@@ -1,7 +1,7 @@
 
 import { reactive } from 'uhtml/reactive';
 import { effect } from '@preact/signals-core';
-import { EnhancedSignal } from './state';
+import { State } from './state';
 
 
 interface Context<S = any, C = {}, A = {}> {
@@ -24,7 +24,7 @@ interface ListenerParams<S> extends Context {
 }
 
 
-export function createComponent<S extends EnhancedSignal<any> = any, C extends {} = {}, A extends {} = {}>({
+export function createComponent<S extends State<any> = any, C extends {} = {}, A extends {} = {}>({
     tagName,
     connected,
     render,
@@ -86,7 +86,7 @@ export function createComponent<S extends EnhancedSignal<any> = any, C extends {
 
         private subscribeDisposer: ReturnType<typeof effect>[] = [];
 
-        private setupEffect<T>(stateSignal: EnhancedSignal<T>, callback: (params: ListenerParams<T>) => void): ReturnType<typeof effect> {
+        private setupEffect<T>(stateSignal: State<T>, callback: (params: ListenerParams<T>) => void): ReturnType<typeof effect> {
             let previousValue = stateSignal.peek();
             return effect(() => {
                 const currentValue = stateSignal.value;
