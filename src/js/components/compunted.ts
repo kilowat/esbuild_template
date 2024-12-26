@@ -18,9 +18,6 @@ createComponent({
     state,
     computed,
     actions,
-    connected(context) {
-
-    },
     render({ state, actions, computed, slots }) {
         return html`
         <div>
@@ -56,6 +53,7 @@ const useActions = (state: State<number>) => {
     const decrement = () => state.emit(state.value - 1)
     return { increment, decrement };
 }
+
 const useComputed = (state: State<number>) => {
     const isOdd = compute(state, (value) => value % 2 !== 0);
     return { isOdd }
@@ -64,18 +62,19 @@ const useComputed = (state: State<number>) => {
 createComponent({
     tagName: 'counter-component-3',
     state: createState(0),
-
-    render({ state }) {
-        const { increment, decrement } = useActions(state);
-        const { isOdd } = useComputed(state)
-        console.log('rerender')
-
+    actions({ state }) {
+        return useActions(state)
+    },
+    computed({ state }) {
+        return useComputed(state)
+    },
+    render({ state, actions, computed }) {
         return html`
         <div>
             <p>Counter: ${state.value}</p>
-            <p>IsOdd: ${isOdd.value}</p>
-            <button @click=${() => increment()} id="increment">Increment</button>
-            <button @click=${() => decrement()}>Decrement</button>
+            <p>IsOdd: ${computed.isOdd.value}</p>
+            <button @click=${() => actions.increment()} id="increment">Increment</button>
+            <button @click=${() => actions.decrement()}>Decrement</button>
         </div>`
     },
 });

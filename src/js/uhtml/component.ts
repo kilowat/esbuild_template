@@ -23,7 +23,6 @@ interface ListenerParams<S> extends Context {
     oldValue: S;
 }
 
-
 export function createComponent<S extends State<any> = any, C extends {} = {}, A extends {} = {}>({
     tagName,
     connected,
@@ -33,8 +32,8 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
     observedAttributes = [],
     listen,
     state,
-    computed = {} as C,
-    actions = {} as A,
+    computed = {} as C | ((context: Context<S, {}, {}>) => C),
+    actions = {} as A | ((context: Context<S, {}, {}>) => A),
 }: {
     tagName: string;
     state?: S;
@@ -44,24 +43,45 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
     listen?: (params: ListenerParams<S>) => void;
     attributeChanged?: (params: AttributeChangeCallback) => void;
     observedAttributes?: string[];
-    computed?: C;
-    actions?: A;
+    computed?: C | ((context: Context<S, {}, {}>) => C);
+    actions?: A | ((context: Context<S, {}, {}>) => A);
 }): void {
+
     if (customElements.get(tagName)) return;
 
     const uRender = reactive(effect);
 
     class CustomElement extends HTMLElement {
+        private computedValue: C;
+        private actionsValue: A;
+
+        constructor() {
+            super();
+            const context = this.context;
+
+            // Явно проверяем, является ли computed функцией
+            this.computedValue =
+                typeof computed === "function"
+                    ? (computed as (context: Context<S, C, A>) => C)(context)
+                    : (computed as C);
+
+            // Явно проверяем, является ли actions функцией
+            this.actionsValue =
+                typeof actions === "function"
+                    ? (actions as (context: Context<S, C, A>) => A)(context)
+                    : (actions as A);
+        }
+
         public get state() {
             return state;
         }
 
         public get actions() {
-            return actions;
+            return this.actionsValue;
         }
 
         public get computed() {
-            return computed;
+            return this.computedValue;
         }
 
         public subscribeToState(callback: (params: ListenerParams<S>) => void) {
@@ -149,11 +169,11 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
         public get context() {
             return {
                 state: state ?? ({} as unknown as S),
-                computed: computed ?? {},
-                actions,
+                computed: this.computedValue ?? {},
+                actions: this.actionsValue ?? {},
                 slots: this.slotContent,
                 element: (this as HTMLElement),
-            }
+            };
         }
 
         private doRender() {
