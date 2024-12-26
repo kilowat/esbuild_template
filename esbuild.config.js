@@ -33,6 +33,8 @@ const build = await esbuild.context({
   drop: productionMode ? ['debugger', 'console'] : [],
   logLevel: productionMode ? 'error' : 'info',
   minify: productionMode,
+  minifyWhitespace: productionMode,
+  minifyIdentifiers: productionMode,
   sourcemap: !productionMode && 'linked',
   outdir: buildPath,
   inject: !productionMode ? ['livereload.js'] : [],

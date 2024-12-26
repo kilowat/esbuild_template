@@ -1,4 +1,4 @@
-import { createComponent, compute, createComputed, html, createState } from "../uhtml";
+import { createComponent, compute, html, createState } from "../uhtml";
 import { State } from "../uhtml/state";
 
 // Вариант определения в не компонента 
