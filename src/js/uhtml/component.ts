@@ -1,13 +1,13 @@
 
 import { reactive } from 'uhtml/reactive';
-import { Signal, effect } from '@preact/signals-core';
-import { ComputedProps, createComputed } from './state';
+import { effect } from '@preact/signals-core';
+import { EnhancedSignal } from './state';
 
 
-interface Context<S = unknown, C = {}, A = {}> {
+interface Context<S = any, C = {}, A = {}> {
     element: HTMLElement;
     state: S;
-    computed: ComputedProps<C>;
+    computed: C;
     actions: A,
     slots: Record<string, Node[]>,
 }
@@ -23,7 +23,8 @@ interface ListenerParams<S> extends Context {
     oldValue: S;
 }
 
-export function createComponent<S = any, C = {}, A extends {} = {}>({
+
+export function createComponent<S extends EnhancedSignal<any> = any, C extends {} = {}, A extends {} = {}>({
     tagName,
     connected,
     render,
@@ -36,7 +37,7 @@ export function createComponent<S = any, C = {}, A extends {} = {}>({
     actions = {} as A,
 }: {
     tagName: string;
-    state?: Signal<S>;
+    state?: S;
     render?: (context: Context<S, C, A>) => (() => unknown) | unknown;
     connected?: (context: Context<S, C, A>) => void;
     disconnected?: (context: Context<S, C, A>) => void;
@@ -49,7 +50,6 @@ export function createComponent<S = any, C = {}, A extends {} = {}>({
     if (customElements.get(tagName)) return;
 
     const uRender = reactive(effect);
-    const decorateComputed = createComputed(computed ?? {}) as ComputedProps<C>
 
     class CustomElement extends HTMLElement {
         public get state() {
@@ -61,7 +61,7 @@ export function createComponent<S = any, C = {}, A extends {} = {}>({
         }
 
         public get computed() {
-            return decorateComputed;
+            return computed;
         }
 
         public subscribeToState(callback: (params: ListenerParams<S>) => void) {
@@ -86,12 +86,12 @@ export function createComponent<S = any, C = {}, A extends {} = {}>({
 
         private subscribeDisposer: ReturnType<typeof effect>[] = [];
 
-        private setupEffect<T>(stateSignal: Signal<T>, callback: (params: ListenerParams<T>) => void): ReturnType<typeof effect> {
+        private setupEffect<T>(stateSignal: EnhancedSignal<T>, callback: (params: ListenerParams<T>) => void): ReturnType<typeof effect> {
             let previousValue = stateSignal.peek();
             return effect(() => {
                 const currentValue = stateSignal.value;
                 if (previousValue !== currentValue) {
-                    callback({ newValue: currentValue, oldValue: previousValue, ...this.getContext() });
+                    callback({ newValue: currentValue, oldValue: previousValue, ...this.context });
                     previousValue = currentValue;
                 }
             });
@@ -101,7 +101,7 @@ export function createComponent<S = any, C = {}, A extends {} = {}>({
             try {
                 requestAnimationFrame(() => {
                     this.collectSlots();
-                    connected?.(this.getContext());
+                    connected?.(this.context);
                     this.doListen();
                     this.doRender();
                 });
@@ -146,10 +146,10 @@ export function createComponent<S = any, C = {}, A extends {} = {}>({
             };
         }
 
-        private getContext() {
+        public get context() {
             return {
-                state: state?.value ?? ({} as unknown as S),
-                computed: decorateComputed,
+                state: state ?? ({} as unknown as S),
+                computed: computed ?? {},
                 actions,
                 slots: this.slotContent,
                 element: (this as HTMLElement),
@@ -160,7 +160,7 @@ export function createComponent<S = any, C = {}, A extends {} = {}>({
             if (!render) return;
 
             const renderFn = () => {
-                return render.bind(this)(this.getContext());
+                return render.bind(this)(this.context);
             };
 
             this.renderDisposer = uRender(this, renderFn);
@@ -183,12 +183,12 @@ export function createComponent<S = any, C = {}, A extends {} = {}>({
 
             this.subscribeDisposer.map((unsub) => unsub());
 
-            disconnected?.(this.getContext());
+            disconnected?.(this.context);
         }
 
         attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
             attributeChanged?.({
-                ...this.getContext(),
+                ...this.context,
                 name,
                 oldValue,
                 newValue,

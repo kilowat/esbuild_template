@@ -49,7 +49,7 @@ export default createComponent({
         <div class="todos">
             <div><button @click="${todoAdd}" ?disabled=${status == 'loading'}>add</button></div>
             <div class="todo-list">
-                ${state.items.map(TodoItem)}
+                ${state.value.items.map(TodoItem)}
             </div>
         <div>
     `

@@ -33,7 +33,7 @@ function cloneDeep<T>(obj: T): T {
     return clonedObj as T;
 }
 
-class EnhancedSignal<T> extends Signal<T> {
+export class EnhancedSignal<T> extends Signal<T> {
     emit(value: Partial<T> | T): void {
         if (typeof value === 'object' && value !== null && typeof this.value === 'object') {
             const currentClone = cloneDeep(this.value);
