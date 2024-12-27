@@ -1,15 +1,13 @@
-
 import { reactive } from 'uhtml/reactive';
 import { effect } from '@preact/signals-core';
 import { State } from './state';
-
 
 interface Context<S = any, C = {}, A = {}> {
     element: HTMLElement;
     state: S;
     computed: C;
-    actions: A,
-    slots: Record<string, Node[]>,
+    actions: A;
+    slots: Record<string, Node[]>;
 }
 
 interface AttributeChangeCallback extends Context {
@@ -34,6 +32,7 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
     state,
     computed = {} as C | ((context: Context<S, {}, {}>) => C),
     actions = {} as A | ((context: Context<S, {}, {}>) => A),
+    ready,
 }: {
     tagName: string;
     state?: S;
@@ -45,8 +44,8 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
     observedAttributes?: string[];
     computed?: C | ((context: Context<S, {}, {}>) => C);
     actions?: A | ((context: Context<S, {}, {}>) => A);
+    ready?: (context: Context<S, C, A>) => void;
 }): void {
-
     if (customElements.get(tagName)) return;
 
     const uRender = reactive(effect);
@@ -54,18 +53,17 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
     class CustomElement extends HTMLElement {
         private computedValue: C;
         private actionsValue: A;
+        private readyExecuted = false;
 
         constructor() {
             super();
             const context = this.context;
 
-            // Явно проверяем, является ли computed функцией
             this.computedValue =
                 typeof computed === "function"
                     ? (computed as (context: Context<S, C, A>) => C)(context)
                     : (computed as C);
 
-            // Явно проверяем, является ли actions функцией
             this.actionsValue =
                 typeof actions === "function"
                     ? (actions as (context: Context<S, C, A>) => A)(context)
@@ -86,7 +84,6 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
 
         public subscribeToState(callback: (params: ListenerParams<S>) => void) {
             if (!state) return () => { };
-
             return this.setupEffect(state, callback);
         }
 
@@ -99,11 +96,8 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
         }
 
         private slotContent: Record<string, Node[]> = {};
-
         private renderDisposer?: ReturnType<typeof uRender>;
-
         private listenerDisposer?: ReturnType<typeof effect>;
-
         private subscribeDisposer: ReturnType<typeof effect>[] = [];
 
         private setupEffect<T>(stateSignal: State<T>, callback: (params: ListenerParams<T>) => void): ReturnType<typeof effect> {
@@ -117,6 +111,13 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
             });
         }
 
+        private checkDocumentReady() {
+            if (document.readyState === 'complete' && !this.readyExecuted && ready) {
+                this.readyExecuted = true;
+                ready(this.context);
+            }
+        }
+
         connectedCallback() {
             try {
                 requestAnimationFrame(() => {
@@ -124,6 +125,12 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
                     connected?.(this.context);
                     this.doListen();
                     this.doRender();
+
+                    if (document.readyState === 'complete') {
+                        this.checkDocumentReady();
+                    } else {
+                        document.addEventListener('readystatechange', () => this.checkDocumentReady());
+                    }
                 });
             } catch (error) {
                 console.error(`Error in ${tagName} connectedCallback:`, error);
@@ -138,12 +145,10 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
 
             const processElementNode = (node: Element) => {
                 const slotName = node.getAttribute('data-slot');
-
                 if (!slotName) {
                     slots.default.push(node);
                     return;
                 }
-
                 if (!slots.named[slotName]) {
                     slots.named[slotName] = [];
                 }
@@ -182,13 +187,11 @@ export function createComponent<S extends State<any> = any, C extends {} = {}, A
             const renderFn = () => {
                 return render.bind(this)(this.context);
             };
-
             this.renderDisposer = uRender(this, renderFn);
         }
 
         private doListen() {
             if (!state || !listen) return;
-
             this.listenerDisposer = this.setupEffect(state, listen);
         }
 

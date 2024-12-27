@@ -9,7 +9,7 @@ const computed = {
     isOdd: compute(state, value => value % 2 !== 0),
 };
 const actions = {
-    increment: () => state.emit(state.value + 1),
+    increment: () => state.value + 1,
     decrement: () => state.emit(state.value - 1),
 }
 
@@ -62,6 +62,9 @@ const useComputed = (state: State<number>) => {
 createComponent({
     tagName: 'counter-component-3',
     state: createState(0),
+    ready(context) {
+        console.log('ready')
+    },
     actions({ state }) {
         return useActions(state)
     },
