@@ -62,9 +62,6 @@ const useComputed = (state: State<number>) => {
 createComponent({
     tagName: 'counter-component-3',
     state: createState(0),
-    ready(context) {
-        console.log('ready')
-    },
     actions({ state }) {
         return useActions(state)
     },
