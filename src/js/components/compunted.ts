@@ -1,4 +1,5 @@
 import { createComponent, compute, html, createState } from "../uhtml";
+import { CustomHtmlElement } from "../uhtml/component";
 import { State } from "../uhtml/state";
 
 // Вариант определения в не компонента 
@@ -13,11 +14,14 @@ const actions = {
     decrement: () => state.emit(state.value - 1),
 }
 
-createComponent({
+export const counterComponent = createComponent({
     tagName: 'counter-component',
     state,
     computed,
     actions,
+    connected(context) {
+
+    },
     render({ state, actions, computed, slots }) {
         return html`
         <div>
@@ -62,11 +66,15 @@ const useComputed = (state: State<number>) => {
 createComponent({
     tagName: 'counter-component-3',
     state: createState(0),
+
     actions({ state }) {
         return useActions(state)
     },
     computed({ state }) {
         return useComputed(state)
+    },
+    connected(context) {
+        counterComponent.subscribe((counterContext) => { console.log(counterContext) })
     },
     render({ state, actions, computed }) {
         return html`

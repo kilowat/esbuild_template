@@ -16,16 +16,10 @@ type Context<S extends State<any>, C, A> = {
     slots: Record<string, Node[]>;
     element: CustomHtmlElement<S, C, A>;
 };
-type SubscriptionParams<S extends State<any>, C, A> = {
-    newValue: StateValue<S>;
-    oldValue: StateValue<S>;
-    computed: C;
-    actions: A;
-}
+
 type ComponentInstanceContext<S extends State<any>, C, A> = Omit<Context<S, C, A>, 'element' | 'slots'> & {
     tagName: string;
-    subscribe: (callback: (params: SubscriptionParams<S, C, A>) => void) => () => void;
-}
+};
 
 type ComponentHooks<S extends State<any>, C, A> = {
     connected?: (context: Context<S, C, A>) => void;
@@ -265,27 +259,9 @@ export function createComponent<
     const computedValue = typeof computed === "function" ? computed(baseContext) : computed;
     const actionsValue = typeof actions === "function" ? actions(baseContext) : actions;
 
-    const subscribe = (callback: (params: SubscriptionParams<S, C, A>) => void) => {
-        let previousValue = state.value;
-
-        const disposer = effect(() => {
-            const currentValue = state.value;
-            callback({
-                newValue: currentValue,
-                oldValue: previousValue,
-                computed: computedValue,
-                actions: actionsValue,
-            });
-            previousValue = currentValue;
-        });
-
-        return disposer;
-    };
-
     return {
         tagName,
         state,
-        subscribe,
         computed: computedValue,
         actions: actionsValue,
     };
