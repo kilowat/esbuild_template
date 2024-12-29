@@ -1,95 +1,85 @@
 import { reactive } from 'uhtml/reactive';
 import { effect } from '@preact/signals-core';
-import { State } from './state';
+import { State, createState } from './state';
 
-type StateValue<S> = S extends State<infer T> ? T : never;
-type ResolveValue<T, Context> = T | ((context: Context) => T);
+type StateValue<S> = S extends State<infer T> ? T : S;
 
-type StateContext<S extends State<any>> = {
-    state: S;
+type StateContext<S> = {
+    state: State<S>;
 };
 
-type Context<S extends State<any>, C, A> = {
-    state: S;
+type ComputedContext<S, C> = StateContext<S> & {
+    computed: C;
+};
+
+type Context<S, C, A> = {
+    state: State<S>;
     computed: C;
     actions: A;
     slots: Record<string, Node[]>;
     element: CustomHtmlElement<S, C, A>;
 };
 
-type ComponentInstanceContext<S extends State<any>, C, A> = Omit<Context<S, C, A>, 'element' | 'slots'> & {
-    tagName: string;
-};
-
-type ComponentHooks<S extends State<any>, C, A> = {
-    connected?: (context: Context<S, C, A>) => void;
-    disconnected?: (context: Context<S, C, A>) => void;
-    render?: (context: Context<S, C, A>) => unknown;
-    listen?: (params: ListenerParams<S, C, A>) => void;
-    attributeChanged?: (params: AttributeChangeCallback<S, C, A>) => void;
-    computed?: ResolveValue<C, StateContext<S>>;
-    actions?: ResolveValue<A, StateContext<S>>;
+interface ListenerParams<S, C, A> extends Context<S, C, A> {
+    newValue: S;
+    oldValue: S;
 }
 
-export interface ComponentOptions<
-    S extends State<any>,
-    C = Record<string, unknown>,
-    A = Record<string, unknown>,
-> extends ComponentHooks<S, C, A> {
-    tagName: string;
-    state: S;
-    observedAttributes?: string[];
-}
-
-interface ListenerParams<S extends State<any>, C, A> extends Context<S, C, A> {
-    newValue: StateValue<S>;
-    oldValue: StateValue<S>;
-}
-
-interface AttributeChangeCallback<S extends State<any>, C, A> extends Context<S, C, A> {
+interface AttributeChangeCallback<S, C, A> extends Context<S, C, A> {
     name: string;
     oldValue: string | null;
     newValue: string | null;
 }
 
-export interface CustomHtmlElement<
-    S extends State<any> = State<any>,
-    C = Record<string, unknown>,
-    A = Record<string, unknown>
-> extends HTMLElement {
+export interface CustomHtmlElement<S = any, C = any, A = any> extends HTMLElement {
     readonly context: Context<S, C, A>;
-    readonly state: S;
+    readonly state: State<S>;
     readonly computed: C;
     readonly actions: A;
     subscribeToState(callback: (params: ListenerParams<S, C, A>) => void): () => void;
     emitEvent<T = any>(name: string, detail: T): void;
 }
 
-export function createComponent<
-    S extends State<any>,
-    C extends Record<string, unknown> = Record<string, unknown>,
-    A extends Record<string, unknown> = Record<string, unknown>,
->({
+type ComponentHooks<S, C, A> = {
+    connected?: (context: Context<S, C, A>) => void;
+    disconnected?: (context: Context<S, C, A>) => void;
+    render?: (context: Context<S, C, A>) => unknown;
+    listen?: (params: ListenerParams<S, C, A>) => void;
+    attributeChanged?: (params: AttributeChangeCallback<S, C, A>) => void;
+}
+
+export interface ComponentOptions<S, C = Record<string, unknown>, A = Record<string, unknown>> extends ComponentHooks<StateValue<S>, C, A> {
+    tagName: string;
+    observedAttributes?: string[];
+    state?: () => State<StateValue<S>>;
+    computed?: (context: StateContext<StateValue<S>>) => C;
+    actions?: (context: ComputedContext<StateValue<S>, C>) => A;
+}
+
+export function createComponent<S, C extends Record<string, unknown> = Record<string, unknown>, A = Record<string, unknown>>({
     tagName,
+    state,
+    computed: createComputed = () => ({} as C),
+    actions: createActions = () => ({} as A),
     connected,
-    render,
     disconnected,
+    render,
+    listen,
     attributeChanged,
     observedAttributes = [],
-    listen,
-    state,
-    computed = {} as ResolveValue<C, StateContext<S>>,
-    actions = {} as ResolveValue<A, StateContext<S>>,
-}: ComponentOptions<S, C, A>): ComponentInstanceContext<S, C, A> {
+}: ComponentOptions<S, C, A>) {
     if (customElements.get(tagName)) {
         throw new Error(`Component with tag name "${tagName}" is already defined`);
     }
 
     const uRender = reactive(effect);
+    const instances = new WeakMap<CustomElement, {
+        state: State<StateValue<S>>;
+        computed: C;
+        actions: A;
+    }>();
 
-    class CustomElement extends HTMLElement implements CustomHtmlElement<S, C, A> {
-        private computedValue: C;
-        private actionsValue: A;
+    class CustomElement extends HTMLElement implements CustomHtmlElement<StateValue<S>, C, A> {
         private slotContent: Record<string, Node[]> = {};
         private renderDisposer?: ReturnType<typeof uRender>;
         private listenerDisposer?: ReturnType<typeof effect>;
@@ -97,48 +87,53 @@ export function createComponent<
 
         constructor() {
             super();
-            const baseContext: StateContext<S> = {
-                state: this.state
-            };
 
-            this.computedValue = typeof computed === "function"
-                ? computed(baseContext)
-                : computed;
+            const createdState = (state && typeof state === "function" ? state() : undefined) as State<StateValue<S>>;
 
-            this.actionsValue = typeof actions === "function"
-                ? actions(baseContext)
-                : actions;
+            const computed = createComputed({
+                state: createdState
+            });
+
+            const actions = createActions({
+                state: createdState,
+                computed: computed
+            });
+
+            instances.set(this, {
+                state: createdState,
+                computed,
+                actions
+            });
         }
 
-        public get state(): S {
-            return state;
-        }
-
-        public get actions(): A {
-            return this.actionsValue;
+        public get state(): State<StateValue<S>> {
+            return instances.get(this)!.state;
         }
 
         public get computed(): C {
-            return this.computedValue;
+            return instances.get(this)!.computed;
+        }
+
+        public get actions(): A {
+            return instances.get(this)!.actions;
+        }
+
+        public get context(): Context<StateValue<S>, C, A> {
+            return {
+                state: this.state,
+                computed: this.computed,
+                actions: this.actions,
+                slots: this.slotContent,
+                element: this,
+            };
         }
 
         static get observedAttributes() {
             return observedAttributes;
         }
 
-        public get context(): Context<S, C, A> {
-            return {
-                state: this.state,
-                computed: this.computedValue,
-                actions: this.actionsValue,
-                slots: this.slotContent,
-                element: this as CustomHtmlElement<S, C, A>,
-            };
-        }
-
-        public subscribeToState(callback: (params: ListenerParams<S, C, A>) => void): () => void {
-            if (!state) return () => { };
-            const disposer = this.setupEffect(state, callback);
+        public subscribeToState(callback: (params: ListenerParams<StateValue<S>, C, A>) => void): () => void {
+            const disposer = this.setupEffect(callback);
             this.subscribeDisposer.push(disposer);
             return () => {
                 const index = this.subscribeDisposer.indexOf(disposer);
@@ -154,15 +149,14 @@ export function createComponent<
         }
 
         private setupEffect(
-            stateSignal: State<S>,
-            callback: (params: ListenerParams<S, C, A>) => void
+            callback: (params: ListenerParams<StateValue<S>, C, A>) => void
         ): ReturnType<typeof effect> {
-            let previousValue = stateSignal.peek();
+            let previousValue = this.state.peek();
             return effect(() => {
-                const currentValue = stateSignal.value;
+                const currentValue = this.state.value;
                 callback({
-                    newValue: currentValue.value,
-                    oldValue: previousValue.value,
+                    newValue: currentValue,
+                    oldValue: previousValue,
                     ...this.context
                 });
                 previousValue = currentValue;
@@ -177,6 +171,7 @@ export function createComponent<
 
             const processElementNode = (node: Element) => {
                 const slotName = node.getAttribute('data-slot');
+
                 if (!slotName) {
                     slots.default.push(node);
                     return;
@@ -222,8 +217,8 @@ export function createComponent<
         }
 
         private setupListener() {
-            if (!state || !listen) return;
-            this.listenerDisposer = this.setupEffect(state, listen);
+            if (!listen) return;
+            this.listenerDisposer = this.setupEffect(listen);
         }
 
         disconnectedCallback() {
@@ -233,6 +228,7 @@ export function createComponent<
                 this.subscribeDisposer.forEach(unsub => unsub());
                 this.subscribeDisposer = [];
                 disconnected?.(this.context);
+                instances.delete(this);
             } catch (error) {
                 console.error(`Error in ${tagName} disconnectedCallback:`, error);
             }
@@ -245,7 +241,7 @@ export function createComponent<
                     name,
                     oldValue,
                     newValue,
-                });
+                } as AttributeChangeCallback<StateValue<S>, C, A>);
             } catch (error) {
                 console.error(`Error in ${tagName} attributeChangedCallback:`, error);
             }
@@ -254,15 +250,5 @@ export function createComponent<
 
     customElements.define(tagName, CustomElement);
 
-    // Initialize and return context
-    const baseContext: StateContext<S> = { state };
-    const computedValue = typeof computed === "function" ? computed(baseContext) : computed;
-    const actionsValue = typeof actions === "function" ? actions(baseContext) : actions;
-
-    return {
-        tagName,
-        state,
-        computed: computedValue,
-        actions: actionsValue,
-    };
+    return { tagName };
 }

@@ -1,48 +1,29 @@
 import { createComponent, compute, html, createState } from "../uhtml";
-import { CustomHtmlElement } from "../uhtml/component";
 import { State } from "../uhtml/state";
 
 // Вариант определения в не компонента 
-export const state = createState(0);
-const computed = {
-    double: compute(state, value => value * 2),
-    isEven: compute(state, value => value % 2 === 0),
-    isOdd: compute(state, value => value % 2 !== 0),
-};
-const actions = {
-    increment: () => state.value + 1,
-    decrement: () => state.emit(state.value - 1),
-}
+const state = createState(0);
 
-export const counterComponent = createComponent({
-    tagName: 'counter-component',
-    state,
-    computed,
-    actions,
+//Вариант 2 локальное минимальное определение определение
+export const counterComponent2 = createComponent({
+    tagName: 'counter-component-2',
+    state() {
+        return state;
+    },
     connected(context) {
 
     },
-    render({ state, actions, computed, slots }) {
+    render({ state, slots }) {
         return html`
-        <div>
-            <p>Counter: ${state}</p>
-            <p>Double: ${computed.double.value}</p>
-            <p>Is Even: ${computed.isEven.value}</p>
-            <p>Is Odd: ${computed.isOdd.value}</p>
-            ${slots.header || html`<p>Default Header</p>`}
-            <button @click=${actions.increment} id="increment">Increment</button>
-            <button @click=${actions.decrement}>Decrement</button>
-        </div>`
-    },
-});
-
-
-//Вариант 2 локальное минимальное определение определение
-createComponent({
-    tagName: 'counter-component-2',
-    state: createState(0),
-    render({ state }) {
-        return html`
+        <div class="header">
+        ${slots.header}
+        </div>
+        <div class="content">
+            ${slots.default}
+        </div>
+        <div class="footer">
+            ${slots.footer}
+        </div>
         <div>
             <p>Counter: ${state.value}</p>
             <button @click=${() => state.emit(state.value + 1)} id="increment">Increment</button>
@@ -52,6 +33,7 @@ createComponent({
 });
 
 // Вариант 3 композитно
+
 const useActions = (state: State<number>) => {
     const increment = () => state.emit(state.value + 1)
     const decrement = () => state.emit(state.value - 1)
@@ -65,20 +47,29 @@ const useComputed = (state: State<number>) => {
 
 createComponent({
     tagName: 'counter-component-3',
-    state: createState(0),
-
-    actions({ state }) {
-        return useActions(state)
+    state() {
+        return state;
     },
     computed({ state }) {
         return useComputed(state)
     },
-    connected(context) {
-        counterComponent.subscribe((counterContext) => { console.log(counterContext) })
+    actions({ state }) {
+        return useActions(state)
     },
-    render({ state, actions, computed }) {
+
+    render({ state, actions, computed, slots }) {
+
         return html`
         <div>
+            <div class="header">
+                ${slots.header}
+            </div>
+            <div class="content">
+                ${slots.default}
+            </div>
+            <div class="footer">
+                ${slots.footer}
+            </div>
             <p>Counter: ${state.value}</p>
             <p>IsOdd: ${computed.isOdd.value}</p>
             <button @click=${() => actions.increment()} id="increment">Increment</button>
