@@ -1,6 +1,21 @@
 import { reactive } from 'uhtml/reactive';
 import { effect } from '@preact/signals-core';
-import { State, createState } from './state';
+import { ComputedResult, State, compute } from './state';
+
+type ComputedFn<S, R> = (state: S) => R;
+
+// Modified to accept direct key-value pairs
+export type ComputedProperties<S> = Record<string, ComputedResult<any>>;
+
+export type ActionProperties<S, C> = Record<string, (...args: any[]) => any>;
+
+type ComputedReturnTypes<S, C extends ComputedProperties<S>> = {
+    [K in keyof C]: C[K];
+};
+
+type ActionReturnTypes<S, C, A extends ActionProperties<S, C>> = {
+    [K in keyof A]: A[K];
+};
 
 type StateValue<S> = S extends State<infer T> ? T : S;
 
@@ -8,11 +23,12 @@ type StateContext<S> = {
     state: State<S>;
 };
 
-type ComputedContext<S, C> = StateContext<S> & {
+type ComputedContext<S, C> = {
+    state: State<S>;
     computed: C;
 };
 
-type Context<S, C, A> = {
+type Context<S, C extends ComputedReturnTypes<StateValue<S>, ComputedProperties<StateValue<S>>>, A extends ActionReturnTypes<StateValue<S>, C, ActionProperties<StateValue<S>, C>>> = {
     state: State<S>;
     computed: C;
     actions: A;
@@ -20,18 +36,42 @@ type Context<S, C, A> = {
     element: CustomHtmlElement<S, C, A>;
 };
 
-interface ListenerParams<S, C, A> extends Context<S, C, A> {
+interface ListenerParams<S, C extends ComputedReturnTypes<StateValue<S>, ComputedProperties<StateValue<S>>>, A extends ActionReturnTypes<StateValue<S>, C, ActionProperties<StateValue<S>, C>>> extends Context<S, C, A> {
     newValue: S;
     oldValue: S;
 }
 
-interface AttributeChangeCallback<S, C, A> extends Context<S, C, A> {
+interface AttributeChangeCallback<S, C extends ComputedReturnTypes<StateValue<S>, ComputedProperties<StateValue<S>>>, A extends ActionReturnTypes<StateValue<S>, C, ActionProperties<StateValue<S>, C>>> extends Context<S, C, A> {
     name: string;
     oldValue: string | null;
     newValue: string | null;
 }
 
-export interface CustomHtmlElement<S = any, C = any, A = any> extends HTMLElement {
+type ComponentHooks<S, C extends ComputedReturnTypes<StateValue<S>, ComputedProperties<StateValue<S>>>, A extends ActionReturnTypes<StateValue<S>, C, ActionProperties<StateValue<S>, C>>> = {
+    connected?: (context: Context<S, C, A>) => void;
+    disconnected?: (context: Context<S, C, A>) => void;
+    render?: (context: Context<S, C, A>) => unknown;
+    listen?: (params: ListenerParams<S, C, A>) => void;
+    attributeChanged?: (params: AttributeChangeCallback<S, C, A>) => void;
+}
+
+export interface ComponentOptions<
+    S,
+    C extends ComputedProperties<StateValue<S>> = ComputedProperties<StateValue<S>>,
+    A extends ActionProperties<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>> = ActionProperties<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>>
+> extends ComponentHooks<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, ActionReturnTypes<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, A>> {
+    tagName: string;
+    observedAttributes?: string[];
+    state?: () => State<StateValue<S>>;
+    computed?: (context: StateContext<StateValue<S>>) => C;
+    actions?: (context: ComputedContext<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>>) => A;
+}
+
+export interface CustomHtmlElement<
+    S,
+    C extends ComputedReturnTypes<StateValue<S>, ComputedProperties<StateValue<S>>> = ComputedReturnTypes<StateValue<S>, ComputedProperties<StateValue<S>>>,
+    A extends ActionReturnTypes<StateValue<S>, C, ActionProperties<StateValue<S>, C>> = ActionReturnTypes<StateValue<S>, C, ActionProperties<StateValue<S>, C>>
+> extends HTMLElement {
     readonly context: Context<S, C, A>;
     readonly state: State<S>;
     readonly computed: C;
@@ -40,23 +80,11 @@ export interface CustomHtmlElement<S = any, C = any, A = any> extends HTMLElemen
     emitEvent<T = any>(name: string, detail: T): void;
 }
 
-type ComponentHooks<S, C, A> = {
-    connected?: (context: Context<S, C, A>) => void;
-    disconnected?: (context: Context<S, C, A>) => void;
-    render?: (context: Context<S, C, A>) => unknown;
-    listen?: (params: ListenerParams<S, C, A>) => void;
-    attributeChanged?: (params: AttributeChangeCallback<S, C, A>) => void;
-}
-
-export interface ComponentOptions<S, C = Record<string, unknown>, A = Record<string, unknown>> extends ComponentHooks<StateValue<S>, C, A> {
-    tagName: string;
-    observedAttributes?: string[];
-    state?: () => State<StateValue<S>>;
-    computed?: (context: StateContext<StateValue<S>>) => C;
-    actions?: (context: ComputedContext<StateValue<S>, C>) => A;
-}
-
-export function createComponent<S, C extends Record<string, unknown> = Record<string, unknown>, A = Record<string, unknown>>({
+export function createComponent<
+    S,
+    C extends ComputedProperties<StateValue<S>> = ComputedProperties<StateValue<S>>,
+    A extends ActionProperties<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>> = ActionProperties<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>>
+>({
     tagName,
     state,
     computed: createComputed = () => ({} as C),
@@ -75,11 +103,11 @@ export function createComponent<S, C extends Record<string, unknown> = Record<st
     const uRender = reactive(effect);
     const instances = new WeakMap<CustomElement, {
         state: State<StateValue<S>>;
-        computed: C;
-        actions: A;
+        computed: ComputedReturnTypes<StateValue<S>, C>;
+        actions: ActionReturnTypes<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, A>;
     }>();
 
-    class CustomElement extends HTMLElement implements CustomHtmlElement<StateValue<S>, C, A> {
+    class CustomElement extends HTMLElement implements CustomHtmlElement<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, ActionReturnTypes<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, A>> {
         private slotContent: Record<string, Node[]> = {};
         private renderDisposer?: ReturnType<typeof uRender>;
         private listenerDisposer?: ReturnType<typeof effect>;
@@ -90,14 +118,20 @@ export function createComponent<S, C extends Record<string, unknown> = Record<st
 
             const createdState = (state && typeof state === "function" ? state() : undefined) as State<StateValue<S>>;
 
-            const computed = createComputed({
+            const computedContext = {
                 state: createdState
-            });
+            };
 
-            const actions = createActions({
+            // Compute values are now directly passed in
+            const computed = createComputed(computedContext) as ComputedReturnTypes<StateValue<S>, C>;
+
+            // Pass both state and computed to actions
+            const actionsContext = {
                 state: createdState,
-                computed: computed
-            });
+                computed
+            };
+
+            const actions = createActions(actionsContext);
 
             instances.set(this, {
                 state: createdState,
@@ -106,19 +140,20 @@ export function createComponent<S, C extends Record<string, unknown> = Record<st
             });
         }
 
+        // Rest of the implementation remains the same as before
         public get state(): State<StateValue<S>> {
             return instances.get(this)!.state;
         }
 
-        public get computed(): C {
+        public get computed(): ComputedReturnTypes<StateValue<S>, C> {
             return instances.get(this)!.computed;
         }
 
-        public get actions(): A {
+        public get actions(): ActionReturnTypes<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, A> {
             return instances.get(this)!.actions;
         }
 
-        public get context(): Context<StateValue<S>, C, A> {
+        public get context(): Context<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, ActionReturnTypes<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, A>> {
             return {
                 state: this.state,
                 computed: this.computed,
@@ -132,7 +167,7 @@ export function createComponent<S, C extends Record<string, unknown> = Record<st
             return observedAttributes;
         }
 
-        public subscribeToState(callback: (params: ListenerParams<StateValue<S>, C, A>) => void): () => void {
+        public subscribeToState(callback: (params: ListenerParams<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, ActionReturnTypes<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, A>>) => void): () => void {
             const disposer = this.setupEffect(callback);
             this.subscribeDisposer.push(disposer);
             return () => {
@@ -149,7 +184,7 @@ export function createComponent<S, C extends Record<string, unknown> = Record<st
         }
 
         private setupEffect(
-            callback: (params: ListenerParams<StateValue<S>, C, A>) => void
+            callback: (params: ListenerParams<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, ActionReturnTypes<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, A>>) => void
         ): ReturnType<typeof effect> {
             let previousValue = this.state.peek();
             return effect(() => {
@@ -241,7 +276,7 @@ export function createComponent<S, C extends Record<string, unknown> = Record<st
                     name,
                     oldValue,
                     newValue,
-                } as AttributeChangeCallback<StateValue<S>, C, A>);
+                } as AttributeChangeCallback<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, ActionReturnTypes<StateValue<S>, ComputedReturnTypes<StateValue<S>, C>, A>>);
             } catch (error) {
                 console.error(`Error in ${tagName} attributeChangedCallback:`, error);
             }

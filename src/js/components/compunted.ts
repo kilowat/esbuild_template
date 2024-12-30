@@ -1,5 +1,5 @@
 import { createComponent, compute, html, createState } from "../uhtml";
-import { State } from "../uhtml/state";
+import { ComputedResult, State } from "../uhtml/state";
 
 // Вариант определения в не компонента 
 const state = createState(0);
@@ -50,7 +50,7 @@ createComponent({
     state() {
         return state;
     },
-    computed({ state }) {
+    computed: ({ state }) => {
         return useComputed(state)
     },
     actions({ state }) {
@@ -76,4 +76,51 @@ createComponent({
             <button @click=${() => actions.decrement()}>Decrement</button>
         </div>`
     },
+});
+interface CounterState {
+    count: number;
+}
+
+type CounterComputed = {
+    doubleCount: ComputedResult<number>;
+    isEven: ComputedResult<boolean>;
+}
+
+type CounterActions = {
+    increment(amount: number): void;
+    reset(): void;
+}
+
+// Типизация будет работать в любом порядке
+const component = createComponent<CounterState, CounterComputed, CounterActions>({
+    tagName: 'my-counter',
+    connected(context) {
+
+    },
+    // Можно определять в любом порядке
+    render: ({ state, computed, actions }) => html`
+        <div>
+            <p>Count: ${state.value.count}</p>
+            <p>Double: ${computed.doubleCount}</p>
+            <p>Is Even: ${computed.isEven}</p>
+            <button onclick=${() => actions.increment(1)}>+1</button>
+            <button onclick=${actions.reset}>Reset</button>
+        </div>
+    `,
+
+    state: () => createState<CounterState>({ count: 0 }),
+
+    computed: ({ state }) => ({
+        doubleCount: compute(state, (s) => s.count * 2),
+        isEven: compute(state, (s) => s.count % 2 === 0)
+    }),
+
+    actions: ({ state, computed }) => ({
+        increment: (amount: number) => {
+            state.emit({ count: state.value.count + amount });
+        },
+        reset: () => {
+            state.emit({ count: 0 });
+        }
+    })
 });

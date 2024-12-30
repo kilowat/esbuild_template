@@ -7,7 +7,7 @@ export type ComputedProps<T> = {
     : UnwrapSignal<T[K]>
 };
 
-type ComputedResult<T> = {
+export type ComputedResult<T> = {
     value: T;
     valueOf: () => T;
     toString: () => string;
