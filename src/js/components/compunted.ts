@@ -1,11 +1,11 @@
-import { createComponent, compute, html, createState } from "../uhtml";
+import { compute, html, createState, defineComponent } from "../uhtml";
 import { ComputedResult, State } from "../uhtml/state";
 
 // Вариант определения в не компонента 
-const state = createState(0);
+export const state = createState(0);
 
 //Вариант 2 локальное минимальное определение определение
-export const counterComponent2 = createComponent({
+defineComponent({
     tagName: 'counter-component-2',
     state() {
         return state;
@@ -45,7 +45,7 @@ const useComputed = (state: State<number>) => {
     return { isOdd }
 }
 
-createComponent({
+defineComponent({
     tagName: 'counter-component-3',
     state() {
         return state;
@@ -56,7 +56,9 @@ createComponent({
     actions({ state }) {
         return useActions(state)
     },
-
+    listen(params) {
+        console.log(params)
+    },
     render({ state, actions, computed, slots }) {
 
         return html`
@@ -77,38 +79,10 @@ createComponent({
         </div>`
     },
 });
-interface CounterState {
-    count: number;
-}
 
-type CounterComputed = {
-    doubleCount: ComputedResult<number>;
-    isEven: ComputedResult<boolean>;
-}
-
-type CounterActions = {
-    increment(amount: number): void;
-    reset(): void;
-}
-
-// Типизация будет работать в любом порядке
-const component = createComponent<CounterState, CounterComputed, CounterActions>({
+defineComponent({
     tagName: 'my-counter',
-    connected(context) {
-
-    },
-    // Можно определять в любом порядке
-    render: ({ state, computed, actions }) => html`
-        <div>
-            <p>Count: ${state.value.count}</p>
-            <p>Double: ${computed.doubleCount}</p>
-            <p>Is Even: ${computed.isEven}</p>
-            <button onclick=${() => actions.increment(1)}>+1</button>
-            <button onclick=${actions.reset}>Reset</button>
-        </div>
-    `,
-
-    state: () => createState<CounterState>({ count: 0 }),
+    state: () => createState({ count: 0 }),
 
     computed: ({ state }) => ({
         doubleCount: compute(state, (s) => s.count * 2),
@@ -122,5 +96,19 @@ const component = createComponent<CounterState, CounterComputed, CounterActions>
         reset: () => {
             state.emit({ count: 0 });
         }
-    })
+    }),
+    connected(context) {
+
+    },
+
+    // Можно определять в любом порядке
+    render: ({ state, computed, actions }) => html`
+        <div>
+            <p>Count: ${state.value.count}</p>
+            <p>Double: ${computed.doubleCount.value}</p>
+            <p>Is Even: ${computed.isEven.value}</p>
+            <button onclick=${() => actions.increment(1)}>+1</button>
+            <button onclick=${actions.reset}>Reset</button>
+        </div>
+    `,
 });

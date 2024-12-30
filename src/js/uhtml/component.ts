@@ -33,7 +33,6 @@ type ComponentContext<S, C, A> = {
     element: CustomHtmlElement<S, C, A>;
 };
 
-// Event interfaces
 interface ListenerParams<S, C, A> extends ComponentContext<S, C, A> {
     newValue: S;
     oldValue: S;
@@ -45,7 +44,6 @@ interface AttributeChangeCallback<S, C, A> extends ComponentContext<S, C, A> {
     newValue: string | null;
 }
 
-// Component options interface
 export interface ComponentOptions<S = any, C = any, A = any> {
     tagName: string;
     observedAttributes?: string[];
@@ -65,12 +63,10 @@ export interface CustomHtmlElement<S, C, A> extends HTMLElement {
     readonly state: State<S>;
     readonly computed: C;
     readonly actions: A;
-    subscribeToState(callback: (params: ListenerParams<S, C, A>) => void): () => void;
     emitEvent<T = any>(name: string, detail: T): void;
 }
 
-// Component creation function with proper type inference
-export function createComponent<
+export function defineComponent<
     S = any,
     C extends Record<string, ComputedResult<any>> = any,
     A extends Record<string, (...args: any[]) => any> = any
@@ -154,18 +150,6 @@ export function createComponent<
 
         static get observedAttributes() {
             return observedAttributes;
-        }
-
-        public subscribeToState(callback: (params: ListenerParams<S, C, A>) => void): () => void {
-            const disposer = this.setupEffect(callback);
-            this.subscribeDisposer.push(disposer);
-            return () => {
-                const index = this.subscribeDisposer.indexOf(disposer);
-                if (index !== -1) {
-                    this.subscribeDisposer.splice(index, 1);
-                }
-                disposer();
-            };
         }
 
         public emitEvent<T = any>(name: string, detail: T): void {
@@ -273,6 +257,4 @@ export function createComponent<
     }
 
     customElements.define(tagName, CustomElement);
-
-    return { tagName };
 }
