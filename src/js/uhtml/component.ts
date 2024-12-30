@@ -2,7 +2,6 @@ import { reactive } from 'uhtml/reactive';
 import { effect } from '@preact/signals-core';
 import { ComputedResult, State, compute } from './state';
 
-// Base generic parameter interfaces
 export interface ComponentState<S = any> {
     state: () => State<S>;
 }
@@ -15,7 +14,6 @@ export interface ComponentActions<S = any, C = any, A = any> {
     actions: (context: { state: State<S>, computed: C }) => A;
 }
 
-// Helper types for component context
 type StateContext<S> = {
     state: State<S>;
 };
@@ -43,7 +41,10 @@ interface AttributeChangeCallback<S, C, A> extends ComponentContext<S, C, A> {
     oldValue: string | null;
     newValue: string | null;
 }
-
+export interface StateSubscriptionCallback<S> {
+    newValue: S;
+    oldValue: S;
+}
 export interface ComponentOptions<S = any, C = any, A = any> {
     tagName: string;
     observedAttributes?: string[];
@@ -64,6 +65,7 @@ export interface CustomHtmlElement<S, C, A> extends HTMLElement {
     readonly computed: C;
     readonly actions: A;
     emitEvent<T = any>(name: string, detail: T): void;
+    subscribeToState(callback: (params: StateSubscriptionCallback<S>) => void): () => void;
 }
 
 export function defineComponent<
@@ -150,6 +152,28 @@ export function defineComponent<
 
         static get observedAttributes() {
             return observedAttributes;
+        }
+
+        public subscribeToState(callback: (params: StateSubscriptionCallback<S>) => void): () => void {
+            let previousValue = this.state.peek();
+
+            const disposer = effect(() => {
+                const currentValue = this.state.value;
+                callback({
+                    newValue: currentValue,
+                    oldValue: previousValue
+                });
+                previousValue = currentValue;
+            });
+
+            this.subscribeDisposer.push(disposer);
+            return () => {
+                const index = this.subscribeDisposer.indexOf(disposer);
+                if (index > -1) {
+                    this.subscribeDisposer.splice(index, 1);
+                }
+                disposer();
+            };
         }
 
         public emitEvent<T = any>(name: string, detail: T): void {
